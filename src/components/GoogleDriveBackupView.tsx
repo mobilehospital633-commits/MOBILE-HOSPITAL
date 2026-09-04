@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Cloud,
   CloudUpload,
@@ -21,6 +21,9 @@ import {
   ArrowRight,
   LogOut,
   AlertTriangle,
+  HelpCircle,
+  Info,
+  Upload,
 } from 'lucide-react';
 import {
   googleSignIn,
@@ -69,6 +72,8 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
 
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<DriveBackupItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showHelpGuide, setShowHelpGuide] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -117,13 +122,45 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
       }
     } catch (err: any) {
       console.error('Sign in error:', err);
-      setErrorMessage(
-        err.message ||
-          'Google authentication was cancelled or could not be completed.'
-      );
+      let msg = err.message || 'Google authentication was cancelled or could not be completed.';
+      if (err.code === 'auth/popup-blocked') {
+        msg = 'The Google sign-in window was blocked by your browser. Please allow popups for this site and click Sign in with Google Drive again.';
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        msg = 'Google sign-in popup was closed before completing. If Google showed "Google hasn\'t verified this app", click "Advanced" and then "Go to Mobile Hospital" to grant backup access.';
+        setShowHelpGuide(true);
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        msg = 'Authentication was interrupted. Please try again.';
+      }
+      setErrorMessage(msg);
     } finally {
       setIsSigningIn(false);
     }
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text) as BackupPayload;
+        if (!parsed.orders || !parsed.inventory) {
+          throw new Error('Invalid backup file structure. Ensure it is a Mobile Hospital JSON backup.');
+        }
+        setRestoreConfirmItem({
+          id: 'local-file-' + Date.now(),
+          name: file.name,
+          createdTime: parsed.exportedAt || new Date().toISOString(),
+          description: `Local file backup • ${parsed.orders?.length || 0} orders, ${parsed.inventory?.length || 0} inventory items`,
+        });
+        setRestorePayloadPreview(parsed);
+      } catch (parseErr: any) {
+        setErrorMessage(parseErr.message || 'Failed to parse selected JSON backup file.');
+      }
+    };
+    reader.readAsText(file);
+    if (e.target) e.target.value = '';
   };
 
   const handleSignOut = async () => {
@@ -286,15 +323,33 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleDownloadOfflineJSON}
-            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-600 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-            title="Download an offline JSON file copy to your local computer"
-          >
-            <FileJson className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Save Offline JSON</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleDownloadOfflineJSON}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-600 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download an offline JSON file copy to your local computer"
+            >
+              <FileJson className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Save Local Backup</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-emerald-300 border border-zinc-600 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Select and restore an offline JSON file from your device"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Restore Local Backup</span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelected}
+              accept=".json,application/json"
+              className="hidden"
+            />
+          </div>
         </div>
       </div>
 
@@ -303,16 +358,44 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <div className="font-semibold">Action Required</div>
-            <div className="text-rose-700 mt-0.5">{errorMessage}</div>
+            <div className="font-semibold">Notice</div>
+            <div className="text-rose-700 mt-0.5 leading-relaxed">{errorMessage}</div>
           </div>
           <button
             type="button"
             onClick={() => setErrorMessage(null)}
-            className="text-rose-400 hover:text-rose-700 font-bold"
+            className="text-rose-400 hover:text-rose-700 font-bold cursor-pointer"
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Google Verification / Help Guide */}
+      {showHelpGuide && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+              <Info className="w-4 h-4 text-amber-600" />
+              <span>How to proceed if Google shows "Google hasn't verified this app"</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHelpGuide(false)}
+              className="text-amber-500 hover:text-amber-800 text-xs font-medium cursor-pointer"
+            >
+              Hide Guide
+            </button>
+          </div>
+          <p className="text-amber-800 leading-relaxed">
+            Because this application uses your private Google Drive for custom backups, Google may show a standard testing warning on first connection. Here is how to complete sign-in:
+          </p>
+          <ol className="list-decimal pl-5 space-y-1 text-amber-800">
+            <li>On the Google sign-in window, click <strong>"Advanced"</strong> (small link on the bottom left).</li>
+            <li>Click <strong>"Go to Mobile Hospital (unsafe)"</strong> to proceed.</li>
+            <li>Check the box to allow the app to create and manage its own backup files on your Google Drive.</li>
+            <li>Click <strong>"Continue"</strong> to complete the secure connection.</li>
+          </ol>
         </div>
       )}
 
@@ -326,7 +409,7 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
           <button
             type="button"
             onClick={() => setBackupSuccessMessage(null)}
-            className="text-emerald-500 hover:text-emerald-800 font-bold"
+            className="text-emerald-500 hover:text-emerald-800 font-bold cursor-pointer"
           >
             ✕
           </button>
@@ -337,18 +420,29 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
       {!googleUser ? (
         <div className="p-6 rounded-2xl bg-white border border-zinc-200 shadow-2xs text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="max-w-md">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 text-[11px] font-semibold mb-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold mb-2">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Restricted Google Drive Access</span>
+              <span>Private & Safe • App Data Only</span>
             </div>
             <h4 className="text-base font-bold text-zinc-900">
               Connect your Google Account
             </h4>
             <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
               Sign in with your Google account to automatically store and sync your repair shop
-              database snapshots. Uses the secure <code>drive.file</code> scope which only permits
-              reading and writing backup files created specifically by this application.
+              database snapshots. Uses the isolated <code>drive.file</code> scope which only permits
+              reading and writing backup files created specifically by this application. Your other Google Drive files remain completely private and inaccessible.
             </p>
+
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={() => setShowHelpGuide(!showHelpGuide)}
+                className="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-800 underline transition-colors cursor-pointer"
+              >
+                <HelpCircle className="w-3 h-3 text-zinc-400" />
+                <span>{showHelpGuide ? 'Hide sign-in help' : 'Need help connecting or seeing Google verification prompt?'}</span>
+              </button>
+            </div>
           </div>
 
           <div>
