@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn } from 'lucide-react';
+import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn, Cloud } from 'lucide-react';
 import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser } from './types';
 import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS } from './data';
 import { Sidebar } from './components/Sidebar';
@@ -17,9 +17,11 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { LoginPage } from './components/LoginPage';
+import { BackupPayload } from './lib/googleDrive';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
+  const [settingsSubtab, setSettingsSubtab] = useState<'general' | 'tax' | 'system' | 'staff' | 'drive'>('tax');
   const [orders, setOrders] = useState<RepairOrder[]>(() => {
     try {
       const saved = localStorage.getItem('mh_orders');
@@ -334,6 +336,24 @@ export default function App() {
     setProfile((prev) => ({ ...prev, themeAccent }));
   };
 
+  const handleRestoreAllData = (payload: BackupPayload) => {
+    if (payload.orders && Array.isArray(payload.orders)) {
+      setOrders(payload.orders);
+    }
+    if (payload.inventory && Array.isArray(payload.inventory)) {
+      setInventory(payload.inventory);
+    }
+    if (payload.transactions && Array.isArray(payload.transactions)) {
+      setTransactions(payload.transactions);
+    }
+    if (payload.profile && typeof payload.profile === 'object') {
+      setProfile((prev) => ({ ...prev, ...payload.profile }));
+    }
+    if (payload.users && Array.isArray(payload.users) && payload.users.length > 0) {
+      setUsers(payload.users);
+    }
+  };
+
   const pageTitles: Record<TabType, string> = {
     dashboard: 'Dashboard Overview',
     'new-order': 'New Repair Order Entry',
@@ -428,6 +448,18 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => {
+                setSettingsSubtab('drive');
+                setCurrentTab('profile');
+              }}
+              title="Free Google Drive Cloud Backup for all workshop entry data"
+              className="bg-white hover:bg-emerald-50 text-zinc-700 hover:text-emerald-700 px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors border border-zinc-200 hover:border-emerald-300 active:scale-98 cursor-pointer shadow-2xs"
+            >
+              <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="hidden sm:inline">Cloud Backup</span>
+            </button>
+
+            <button
               onClick={handleRefresh}
               className="bg-white hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-colors border border-zinc-200 hover:border-zinc-300 active:scale-98 cursor-pointer shadow-2xs"
             >
@@ -483,6 +515,10 @@ export default function App() {
               onNavigate={setCurrentTab}
               onOpenReceipt={(id) => setReceiptOrderId(id)}
               onToggleHideTotalBilled={handleToggleHideTotalBilled}
+              onOpenCloudBackup={() => {
+                setSettingsSubtab('drive');
+                setCurrentTab('profile');
+              }}
             />
           )}
 
@@ -553,6 +589,11 @@ export default function App() {
                 setCurrentUser(u);
               }}
               onDeleteUser={handleDeleteUser}
+              orders={orders}
+              inventory={inventory}
+              transactions={transactions}
+              onRestoreAllData={handleRestoreAllData}
+              initialSubtab={settingsSubtab}
             />
           )}
         </div>

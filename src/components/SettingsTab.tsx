@@ -21,11 +21,14 @@ import {
   Shield,
   Check,
   Lock,
+  Cloud,
 } from 'lucide-react';
-import { ShopProfile, ThemeMode, ThemeAccent, AppUser } from '../types';
+import { ShopProfile, ThemeMode, ThemeAccent, AppUser, RepairOrder, InventoryItem, AccountTransaction } from '../types';
 import { generateQrCodeDataUrl } from '../utils/qr';
 import { MHLogo } from './MHLogo';
 import { ThemeSelector } from './ThemeSelector';
+import { GoogleDriveBackupView } from './GoogleDriveBackupView';
+import { BackupPayload } from '../lib/googleDrive';
 
 interface SettingsTabProps {
   profile: ShopProfile;
@@ -40,6 +43,11 @@ interface SettingsTabProps {
   onOpenRegister?: () => void;
   onSwitchUser?: (user: AppUser) => void;
   onDeleteUser?: (userId: string) => void;
+  orders?: RepairOrder[];
+  inventory?: InventoryItem[];
+  transactions?: AccountTransaction[];
+  onRestoreAllData?: (payload: BackupPayload) => void;
+  initialSubtab?: 'general' | 'tax' | 'system' | 'staff' | 'drive';
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -55,11 +63,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onOpenRegister,
   onSwitchUser,
   onDeleteUser,
+  orders = [],
+  inventory = [],
+  transactions = [],
+  onRestoreAllData,
+  initialSubtab = 'tax',
 }) => {
-  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'staff'>('tax');
+  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'staff' | 'drive'>(initialSubtab);
   const [formData, setFormData] = useState<ShopProfile>(profile);
   const [previewQrUrl, setPreviewQrUrl] = useState<string>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (initialSubtab) {
+      setSubtab(initialSubtab);
+    }
+  }, [initialSubtab]);
 
   useEffect(() => {
     setFormData(profile);
@@ -145,6 +164,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setSubtab('drive')}
+              className="bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Cloud Backup</span>
+            </button>
+            <button
+              type="button"
               onClick={handleExportJSON}
               className="bg-white hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-zinc-200 flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
@@ -165,11 +192,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         {/* Subtabs */}
-        <div className="flex border-b border-zinc-100 gap-6 text-xs font-semibold">
+        <div className="flex border-b border-zinc-100 gap-6 text-xs font-semibold overflow-x-auto">
           <button
             type="button"
             onClick={() => setSubtab('general')}
-            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider ${
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider whitespace-nowrap ${
               subtab === 'general'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
@@ -180,7 +207,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={() => setSubtab('tax')}
-            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap ${
               subtab === 'tax'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
@@ -192,7 +219,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={() => setSubtab('system')}
-            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap ${
               subtab === 'system'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
@@ -204,7 +231,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <button
             type="button"
             onClick={() => setSubtab('staff')}
-            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap ${
               subtab === 'staff'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
@@ -212,6 +239,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           >
             <Users className="w-3.5 h-3.5" />
             <span>Staff & Accounts ({users.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubtab('drive')}
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap ${
+              subtab === 'drive'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-400 hover:text-zinc-600'
+            }`}
+          >
+            <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Google Drive Backup</span>
           </button>
         </div>
 
@@ -871,24 +910,40 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           )}
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-between border-t border-zinc-100 pt-5">
-            <div>
-              {saveSuccess && (
-                <span className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Settings saved successfully!</span>
-                </span>
-              )}
+          {/* SUBTAB 5: Google Drive Cloud Backup */}
+          {subtab === 'drive' && (
+            <div className="pt-1">
+              <GoogleDriveBackupView
+                orders={orders}
+                inventory={inventory}
+                transactions={transactions}
+                profile={profile}
+                users={users}
+                onRestoreAllData={onRestoreAllData || (() => {})}
+              />
             </div>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg transition-colors shadow-2xs flex items-center gap-2 cursor-pointer active:scale-98"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Settings</span>
-            </button>
-          </div>
+          )}
+
+          {/* Form Actions - Hidden when on drive subtab */}
+          {subtab !== 'drive' && (
+            <div className="flex items-center justify-between border-t border-zinc-100 pt-5">
+              <div>
+                {saveSuccess && (
+                  <span className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Settings saved successfully!</span>
+                  </span>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg transition-colors shadow-2xs flex items-center gap-2 cursor-pointer active:scale-98"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Settings</span>
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

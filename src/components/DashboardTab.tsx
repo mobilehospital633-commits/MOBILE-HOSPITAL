@@ -14,6 +14,8 @@ import {
   ArrowUpRight,
   Eye,
   EyeOff,
+  Cloud,
+  CloudUpload,
 } from 'lucide-react';
 import { AccountTransaction, RepairOrder, ShopProfile, TabType } from '../types';
 
@@ -24,6 +26,7 @@ interface DashboardTabProps {
   onNavigate: (tab: TabType) => void;
   onOpenReceipt: (orderId: string) => void;
   onToggleHideTotalBilled?: () => void;
+  onOpenCloudBackup?: () => void;
 }
 
 export const DashboardTab: React.FC<DashboardTabProps> = ({
@@ -33,6 +36,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onNavigate,
   onOpenReceipt,
   onToggleHideTotalBilled,
+  onOpenCloudBackup,
 }) => {
   const curr = profile.currency || '₹';
   const totalJobs = orders.length;
@@ -241,6 +245,36 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
           </button>
         </div>
+      </div>
+
+      {/* Cloud Data Protection Banner */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs border border-zinc-700">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <Cloud className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs font-bold flex items-center gap-1.5">
+              <span>Google Drive Cloud Backup</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-semibold border border-emerald-500/30">
+                Free
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-300 mt-0.5">
+              Safely backup all {totalJobs} repair tickets, parts inventory & income accounts to your Google Drive.
+            </div>
+          </div>
+        </div>
+        {onOpenCloudBackup && (
+          <button
+            type="button"
+            onClick={onOpenCloudBackup}
+            className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-900 text-xs font-bold transition-all flex items-center gap-1.5 self-end sm:self-auto cursor-pointer shrink-0 shadow-xs active:scale-98"
+          >
+            <CloudUpload className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Manage Cloud Backup</span>
+          </button>
+        )}
       </div>
 
       {/* Recent Orders Table */}
