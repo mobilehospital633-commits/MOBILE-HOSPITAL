@@ -13,8 +13,16 @@ import {
   Eye,
   EyeOff,
   Palette,
+  Users,
+  UserPlus,
+  Crown,
+  Briefcase,
+  Wrench,
+  Shield,
+  Check,
+  Lock,
 } from 'lucide-react';
-import { ShopProfile, ThemeMode, ThemeAccent } from '../types';
+import { ShopProfile, ThemeMode, ThemeAccent, AppUser } from '../types';
 import { generateQrCodeDataUrl } from '../utils/qr';
 import { MHLogo } from './MHLogo';
 import { ThemeSelector } from './ThemeSelector';
@@ -27,6 +35,11 @@ interface SettingsTabProps {
   onClearTransactions?: () => void;
   onResetAllData: () => void;
   onImportProfile: (profile: ShopProfile) => void;
+  users?: AppUser[];
+  currentUser?: AppUser | null;
+  onOpenRegister?: () => void;
+  onSwitchUser?: (user: AppUser) => void;
+  onDeleteUser?: (userId: string) => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -37,8 +50,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onClearTransactions,
   onResetAllData,
   onImportProfile,
+  users = [],
+  currentUser,
+  onOpenRegister,
+  onSwitchUser,
+  onDeleteUser,
 }) => {
-  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system'>('tax');
+  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'staff'>('tax');
   const [formData, setFormData] = useState<ShopProfile>(profile);
   const [previewQrUrl, setPreviewQrUrl] = useState<string>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -182,6 +200,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           >
             <Palette className="w-3.5 h-3.5" />
             <span>Theme & System</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubtab('staff')}
+            className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
+              subtab === 'staff'
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-400 hover:text-zinc-600'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Staff & Accounts ({users.length})</span>
           </button>
         </div>
 
@@ -659,6 +689,183 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   >
                     Reset All Data to Default
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUBTAB 4: Staff & Accounts */}
+          {subtab === 'staff' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                    Workshop Staff & Technician Directory
+                  </h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Manage registered technicians, store managers, and administrative logins for this workstation.
+                  </p>
+                </div>
+                {onOpenRegister && (
+                  <button
+                    type="button"
+                    onClick={onOpenRegister}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer active:scale-98 self-start sm:self-auto"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Register New Staff</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Staff Cards List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {users.map((u) => {
+                  const isCurrent = currentUser?.id === u.id;
+                  const initials = u.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+
+                  const roleStyle =
+                    u.role === 'owner'
+                      ? { bg: 'bg-amber-100 text-amber-800 border-amber-200', icon: Crown }
+                      : u.role === 'manager'
+                      ? { bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: Briefcase }
+                      : { bg: 'bg-blue-100 text-blue-800 border-blue-200', icon: Wrench };
+
+                  const RoleIcon = roleStyle.icon;
+
+                  return (
+                    <div
+                      key={u.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isCurrent
+                          ? 'border-zinc-900 bg-zinc-50/70 shadow-xs ring-1 ring-zinc-900/10'
+                          : 'border-zinc-200 bg-white hover:border-zinc-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0"
+                            style={{ backgroundColor: u.avatarColor || '#18181b' }}
+                          >
+                            {initials}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-zinc-900 leading-tight">
+                                {u.name}
+                              </h4>
+                              {isCurrent && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Active Session
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs font-mono text-zinc-500">
+                              @{u.username}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${roleStyle.bg}`}
+                        >
+                          <RoleIcon className="w-3 h-3" />
+                          <span>{u.role}</span>
+                        </span>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-600">
+                        <div>
+                          <span className="text-[10px] text-zinc-400 uppercase font-semibold block">
+                            Email
+                          </span>
+                          <span className="truncate block font-medium">{u.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-zinc-400 uppercase font-semibold block">
+                            Phone
+                          </span>
+                          <span className="font-medium">{u.phone || 'Not provided'}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400">
+                          Joined {u.createdAt || 'Recent'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {!isCurrent && onSwitchUser && (
+                            <button
+                              type="button"
+                              onClick={() => onSwitchUser(u)}
+                              className="text-xs text-zinc-700 hover:text-zinc-900 font-semibold hover:underline cursor-pointer"
+                            >
+                              Switch to User
+                            </button>
+                          )}
+                          {!isCurrent && u.role !== 'owner' && onDeleteUser && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Remove staff member "${u.name}"?`)) {
+                                  onDeleteUser(u.id);
+                                }
+                              }}
+                              className="text-xs text-rose-600 hover:text-rose-800 font-semibold hover:underline cursor-pointer ml-2"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Roles & Security Card */}
+              <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-zinc-700" />
+                  <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                    Role-Based Access Overview
+                  </h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-zinc-600">
+                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-800 mb-1">
+                      <Crown className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Shop Owner</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                      Complete administrative access to total billed figures, tax invoice rates, system resets, and staff directory.
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-800 mb-1">
+                      <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Store Manager</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                      Can create & edit repair tickets, record cash/UPI deposits, manage parts inventory, and log daily shop expenses.
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
+                    <div className="flex items-center gap-1.5 font-bold text-blue-800 mb-1">
+                      <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Hardware Technician</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                      Assigned to diagnosis, screen and component replacements, repair status updates, and customer pickup verification.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

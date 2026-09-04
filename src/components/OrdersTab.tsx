@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   QrCode,
   Filter,
+  Wrench,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
 
@@ -123,6 +124,12 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       <td className="py-3.5 px-5">
                         <strong className="text-zinc-800 font-medium">{o.model}</strong>
                         <span className="block text-xs text-zinc-400 font-mono">IMEI: {o.imei}</span>
+                        {o.technician && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium mt-0.5">
+                            <Wrench className="w-2.5 h-2.5 text-zinc-400" />
+                            <span>{o.technician}</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Financials */}

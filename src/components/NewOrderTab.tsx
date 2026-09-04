@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { PlusCircle, Receipt, QrCode, Sparkles } from 'lucide-react';
-import { RepairOrder, ShopProfile } from '../types';
+import { PlusCircle, Receipt, QrCode, Sparkles, UserCheck } from 'lucide-react';
+import { RepairOrder, ShopProfile, AppUser } from '../types';
 
 interface NewOrderTabProps {
   profile: ShopProfile;
   onOrderCreated: (order: RepairOrder) => void;
+  currentUser?: AppUser | null;
+  users?: AppUser[];
 }
 
 export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   profile,
   onOrderCreated,
+  currentUser,
+  users = [],
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -19,6 +23,7 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   const [cost, setCost] = useState('');
   const [deposit, setDeposit] = useState('0.00');
   const [status, setStatus] = useState<RepairOrder['status']>(profile.defaultStatus || 'Pending');
+  const [technician, setTechnician] = useState(currentUser?.name || '');
 
   const curr = profile.currency || '₹';
 
@@ -44,6 +49,8 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
       deposit: numDeposit,
       status: status,
       date: new Date().toISOString().split('T')[0],
+      technician: technician.trim() || currentUser?.name || 'Workshop Bench',
+      createdBy: currentUser?.name || 'Staff',
     };
 
     onOrderCreated(newOrder);
@@ -153,7 +160,7 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
                 Estimated Cost ({curr}) *
@@ -198,6 +205,34 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
                 <option value="In Progress">In Progress</option>
                 <option value="Completed">Completed</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
+                Assigned Tech
+              </label>
+              {users.length > 0 ? (
+                <select
+                  value={technician}
+                  onChange={(e) => setTechnician(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors bg-white"
+                >
+                  <option value="">-- Select Staff --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.name}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={technician}
+                  onChange={(e) => setTechnician(e.target.value)}
+                  placeholder="Technician Name"
+                  className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
+                />
+              )}
             </div>
           </div>
 

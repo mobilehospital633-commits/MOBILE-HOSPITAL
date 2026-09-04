@@ -1,4 +1,31 @@
-import { AccountTransaction, InventoryItem, RepairOrder, ShopProfile } from './types';
+import { AccountTransaction, InventoryItem, RepairOrder, ShopProfile, AppUser } from './types';
+
+export const INITIAL_USERS: AppUser[] = [
+  {
+    id: 'USR-001',
+    name: 'Admin Owner',
+    username: 'admin',
+    email: 'owner@mobilehospital.com',
+    passwordHash: 'admin123',
+    role: 'owner',
+    phone: '+91 98765 43210',
+    avatarColor: '#10b981',
+    createdAt: '2026-09-01',
+    lastLoginAt: '2026-09-04',
+  },
+  {
+    id: 'USR-002',
+    name: 'Alex Rivera',
+    username: 'alex.tech',
+    email: 'alex@mobilehospital.com',
+    passwordHash: 'tech123',
+    role: 'technician',
+    phone: '+91 98765 11223',
+    avatarColor: '#2563eb',
+    createdAt: '2026-09-02',
+    lastLoginAt: '2026-09-04',
+  },
+];
 
 export const INITIAL_ORDERS: RepairOrder[] = [
   {

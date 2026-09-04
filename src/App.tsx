@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCw, Plus, QrCode, Eye, EyeOff } from 'lucide-react';
-import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent } from './types';
-import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS } from './data';
+import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn } from 'lucide-react';
+import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser } from './types';
+import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS } from './data';
 import { Sidebar } from './components/Sidebar';
 import { DashboardTab } from './components/DashboardTab';
 import { NewOrderTab } from './components/NewOrderTab';
@@ -14,6 +14,8 @@ import { ReceiptModal } from './components/ReceiptModal';
 import { EditOrderModal } from './components/EditOrderModal';
 import { MHLogo } from './components/MHLogo';
 import { ThemeSelector } from './components/ThemeSelector';
+import { AuthModal } from './components/AuthModal';
+import { UserMenu } from './components/UserMenu';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
@@ -56,9 +58,56 @@ export default function App() {
     }
   });
 
+  // User Accounts & Authentication State
+  const [users, setUsers] = useState<AppUser[]>(() => {
+    try {
+      const saved = localStorage.getItem('mh_users');
+      return saved ? JSON.parse(saved) : INITIAL_USERS;
+    } catch {
+      return INITIAL_USERS;
+    }
+  });
+
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('mh_current_user');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      // Default to initial shop owner for immediate smooth experience
+      return INITIAL_USERS[0];
+    } catch {
+      return INITIAL_USERS[0];
+    }
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('mh_users', JSON.stringify(users));
+    } catch (e) {
+      console.error('Failed to persist users', e);
+    }
+  }, [users]);
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem('mh_current_user', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('mh_current_user');
+      }
+    } catch (e) {
+      console.error('Failed to persist current user', e);
+    }
+  }, [currentUser]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -259,6 +308,27 @@ export default function App() {
     setProfile(imported);
   };
 
+  const handleLogin = (user: AppUser) => {
+    setCurrentUser(user);
+    setIsAuthModalOpen(false);
+  };
+
+  const handleRegister = (newUser: AppUser) => {
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    setIsAuthModalOpen(false);
+  };
+
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+  };
+
   const handleToggleHideTotalBilled = () => {
     setProfile((prev) => ({
       ...prev,
@@ -370,6 +440,34 @@ export default function App() {
               <Plus className="w-4 h-4" />
               <span>Create Repair Order</span>
             </button>
+
+            {/* Staff Account & Authentication Menu */}
+            {currentUser ? (
+              <UserMenu
+                currentUser={currentUser}
+                onSignOut={handleSignOut}
+                onOpenSwitchUser={() => {
+                  setAuthModalMode('login');
+                  setIsAuthModalOpen(true);
+                }}
+                onOpenRegister={() => {
+                  setAuthModalMode('register');
+                  setIsAuthModalOpen(true);
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalMode('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -390,6 +488,8 @@ export default function App() {
             <NewOrderTab
               profile={profile}
               onOrderCreated={handleOrderCreated}
+              currentUser={currentUser}
+              users={users}
             />
           )}
 
@@ -441,6 +541,16 @@ export default function App() {
               onClearTransactions={handleClearTransactions}
               onResetAllData={handleResetAllData}
               onImportProfile={handleImportProfile}
+              users={users}
+              currentUser={currentUser}
+              onOpenRegister={() => {
+                setAuthModalMode('register');
+                setIsAuthModalOpen(true);
+              }}
+              onSwitchUser={(u) => {
+                setCurrentUser(u);
+              }}
+              onDeleteUser={handleDeleteUser}
             />
           )}
         </div>
@@ -461,6 +571,17 @@ export default function App() {
         isOpen={!!editOrderId}
         onClose={() => setEditOrderId(null)}
         onSave={handleSaveEditOrder}
+      />
+
+      {/* Authentication (Login & Staff Registration) Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen || !currentUser}
+        canClose={!!currentUser}
+        initialMode={authModalMode}
+        users={users}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
       />
     </div>
   );

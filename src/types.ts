@@ -1,3 +1,18 @@
+export type UserRole = 'owner' | 'manager' | 'technician';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  phone?: string;
+  avatarColor: string;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
 export interface RepairOrder {
   id: string;
   name: string;
@@ -9,6 +24,8 @@ export interface RepairOrder {
   deposit: number;
   status: 'Pending' | 'In Progress' | 'Completed' | 'Delivered';
   date: string;
+  technician?: string;
+  createdBy?: string;
 }
 
 export interface InventoryItem {
