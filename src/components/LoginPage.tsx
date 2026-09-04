@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Lock,
   User,
@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Sparkles,
   KeyRound,
+  Check,
 } from 'lucide-react';
 import { AppUser, UserRole, ShopProfile } from '../types';
 import { MHLogo } from './MHLogo';
@@ -48,6 +49,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [saveCredentials, setSaveCredentials] = useState<boolean>(true);
+  const [hasStoredCredentials, setHasStoredCredentials] = useState<boolean>(false);
+
+  // Load saved credentials from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mh_saved_credentials');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.identifier) {
+          setLoginIdentifier(parsed.identifier);
+          if (parsed.password) {
+            setLoginPassword(parsed.password);
+          }
+          setSaveCredentials(true);
+          setHasStoredCredentials(true);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load saved credentials', e);
+    }
+  }, []);
+
+  const handleClearSavedCredentials = () => {
+    try {
+      localStorage.removeItem('mh_saved_credentials');
+      setLoginIdentifier('');
+      setLoginPassword('');
+      setHasStoredCredentials(false);
+    } catch (e) {
+      console.error('Failed to clear credentials', e);
+    }
+  };
 
   // Register state
   const [regName, setRegName] = useState('');
@@ -88,6 +122,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     if (matchedUser.passwordHash !== cleanPw) {
       setLoginError('Incorrect password. Please verify your credentials or click a Quick Login demo.');
       return;
+    }
+
+    // Save or clear credentials on this workstation device
+    try {
+      if (saveCredentials) {
+        localStorage.setItem(
+          'mh_saved_credentials',
+          JSON.stringify({
+            identifier: cleanId,
+            password: cleanPw,
+            savedAt: new Date().toISOString(),
+          })
+        );
+        setHasStoredCredentials(true);
+      } else {
+        localStorage.removeItem('mh_saved_credentials');
+        setHasStoredCredentials(false);
+      }
+    } catch (e) {
+      console.error('Failed to update credentials storage', e);
     }
 
     // Success
@@ -270,6 +324,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <input
                       type="text"
+                      name="username"
+                      autoComplete="username"
                       required
                       autoFocus
                       value={loginIdentifier}
@@ -293,6 +349,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <input
                       type={showLoginPassword ? 'text' : 'password'}
+                      name="password"
+                      autoComplete="current-password"
                       required
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
@@ -311,6 +369,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Save Username & Password Option */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <label className="flex items-center gap-2 text-zinc-300 hover:text-white cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      checked={saveCredentials}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setSaveCredentials(isChecked);
+                        if (!isChecked && hasStoredCredentials) {
+                          localStorage.removeItem('mh_saved_credentials');
+                          setHasStoredCredentials(false);
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 transition-colors cursor-pointer accent-emerald-500"
+                    />
+                    <span className="text-[12px] font-medium flex items-center gap-1.5">
+                      <span>Save Username & Password</span>
+                      {hasStoredCredentials && (
+                        <span className="text-[10px] text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-1.5 py-0.2 rounded font-normal flex items-center gap-0.5">
+                          <Check className="w-2.5 h-2.5" />
+                          <span>Saved on device</span>
+                        </span>
+                      )}
+                    </span>
+                  </label>
+
+                  {hasStoredCredentials && (
+                    <button
+                      type="button"
+                      onClick={handleClearSavedCredentials}
+                      className="text-[11px] text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer underline-offset-2 hover:underline"
+                      title="Clear saved login credentials from this workstation browser"
+                    >
+                      Clear Saved
+                    </button>
+                  )}
                 </div>
 
                 <button
