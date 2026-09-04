@@ -1,0 +1,6 @@
+{
+  "name": "Mobile Repair & Billing Manager",
+  "description": "Repair management system with customer receipts, billing QR codes, income & expense accounts ledger, inventory tracking, and job status management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
