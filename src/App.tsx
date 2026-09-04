@@ -16,6 +16,7 @@ import { MHLogo } from './components/MHLogo';
 import { ThemeSelector } from './components/ThemeSelector';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
+import { LoginPage } from './components/LoginPage';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
@@ -58,7 +59,7 @@ export default function App() {
     }
   });
 
-  // User Accounts & Authentication State
+  // User Accounts & Authentication State - defaults to null to show Login Page first
   const [users, setUsers] = useState<AppUser[]>(() => {
     try {
       const saved = localStorage.getItem('mh_users');
@@ -68,18 +69,7 @@ export default function App() {
     }
   });
 
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    try {
-      const saved = localStorage.getItem('mh_current_user');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-      // Default to initial shop owner for immediate smooth experience
-      return INITIAL_USERS[0];
-    } catch {
-      return INITIAL_USERS[0];
-    }
-  });
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
@@ -356,6 +346,18 @@ export default function App() {
 
   const activeReceiptOrder = orders.find((o) => o.id === receiptOrderId) || null;
   const activeEditOrder = orders.find((o) => o.id === editOrderId) || null;
+
+  // Render Login Page first if not authenticated
+  if (!currentUser) {
+    return (
+      <LoginPage
+        users={users}
+        profile={profile}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-50 text-zinc-900 antialiased selection:bg-zinc-900 selection:text-white">
