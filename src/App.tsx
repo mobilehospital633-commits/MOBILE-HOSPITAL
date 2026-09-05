@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn, Cloud } from 'lucide-react';
 import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser, StolenDeviceRecord } from './types';
 import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS, INITIAL_STOLEN_REGISTRY } from './data';
+import { COMPREHENSIVE_PARTS_CATALOG } from './partsCatalog';
 import { Sidebar } from './components/Sidebar';
 import { DashboardTab } from './components/DashboardTab';
 import { NewOrderTab } from './components/NewOrderTab';
@@ -37,7 +38,13 @@ export default function App() {
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
     try {
       const saved = localStorage.getItem('mh_inventory');
-      return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= 20 && parsed[0]?.category && parsed[0]?.brand) {
+          return parsed;
+        }
+      }
+      return INITIAL_INVENTORY;
     } catch {
       return INITIAL_INVENTORY;
     }
@@ -365,7 +372,25 @@ export default function App() {
   };
 
   const handleAddInventory = (item: InventoryItem) => {
-    setInventory((prev) => [...prev, item]);
+    setInventory((prev) => [item, ...prev]);
+  };
+
+  const handleUpdateInventory = (updated: InventoryItem) => {
+    setInventory((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    );
+  };
+
+  const handleAdjustStock = (id: string, delta: number) => {
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
+      )
+    );
+  };
+
+  const handleResetCatalog = () => {
+    setInventory(COMPREHENSIVE_PARTS_CATALOG);
   };
 
   const handleDeleteInventory = (id: string) => {
@@ -698,8 +723,12 @@ export default function App() {
           {currentTab === 'inventory' && (
             <InventoryTab
               inventory={inventory}
+              currency={profile.currency}
               onAddItem={handleAddInventory}
+              onUpdateItem={handleUpdateInventory}
               onDeleteItem={handleDeleteInventory}
+              onAdjustStock={handleAdjustStock}
+              onResetCatalog={handleResetCatalog}
             />
           )}
 

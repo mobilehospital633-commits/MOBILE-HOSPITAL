@@ -36,11 +36,32 @@ export interface RepairOrder {
   lockNotes?: string;
 }
 
+export type PartCategory =
+  | 'Screens & Displays'
+  | 'Cases & Covers'
+  | 'Audio & Headphones'
+  | 'Tempered Glass'
+  | 'Batteries'
+  | 'Charging Ports & Flex'
+  | 'Cameras & Lenses'
+  | 'Speakers & Earpiece'
+  | 'Housings & Frames'
+  | 'Motherboard & ICs'
+  | 'Buttons & Sensors'
+  | 'Workshop Consumables'
+  | 'General Spares';
+
 export interface InventoryItem {
   id: string;
   name: string;
   sku: string;
   qty: number;
+  category?: PartCategory | string;
+  brand?: string;
+  model?: string;
+  costPrice?: number;
+  salePrice?: number;
+  minStock?: number;
 }
 
 export interface ShopProfile {

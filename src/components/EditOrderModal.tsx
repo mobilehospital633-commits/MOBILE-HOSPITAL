@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Edit3, Save } from 'lucide-react';
 import { RepairOrder } from '../types';
+import { getAllModels } from '../brandModels';
 
 interface EditOrderModalProps {
   order: RepairOrder | null;
@@ -111,11 +112,17 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
               </label>
               <input
                 type="text"
+                list="edit-models-datalist"
                 required
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
               />
+              <datalist id="edit-models-datalist">
+                {getAllModels().map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">

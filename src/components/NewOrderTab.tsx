@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PlusCircle, Receipt, QrCode, Sparkles, UserCheck, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { RepairOrder, ShopProfile, AppUser, StolenDeviceRecord } from '../types';
 import { cleanImei, decodeTac, validateLuhn } from '../utils/imei';
+import { ALL_BRANDS, getAllModels, getModelsForBrand } from '../brandModels';
 
 interface NewOrderTabProps {
   profile: ShopProfile;
@@ -129,17 +130,45 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                Device Brand & Model *
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Device Brand & Model *
+                </label>
+                <span className="text-[10px] text-zinc-400">All brands & models supported</span>
+              </div>
               <input
                 type="text"
+                list="order-models-datalist"
                 required
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="e.g. iPhone 14 Pro Max / OnePlus 11"
+                placeholder="e.g. iPhone 15 Pro Max, Galaxy S24 Ultra, OnePlus 12..."
                 className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
               />
+              <datalist id="order-models-datalist">
+                {getAllModels().map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+
+              {/* Quick Brand prefix shortcuts */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                <span className="text-[10px] text-zinc-400 font-medium mr-0.5">Quick Brand:</span>
+                {['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Vivo', 'Realme', 'Pixel', 'Moto'].map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => {
+                      if (!model.toLowerCase().includes(b.toLowerCase())) {
+                        setModel(b + ' ');
+                      }
+                    }}
+                    className="text-[10px] font-medium px-1.5 py-0.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded transition-colors cursor-pointer"
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>

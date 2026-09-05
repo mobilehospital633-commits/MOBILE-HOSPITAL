@@ -1,4 +1,5 @@
 import { AccountTransaction, InventoryItem, RepairOrder, ShopProfile, AppUser, StolenDeviceRecord } from './types';
+import { COMPREHENSIVE_PARTS_CATALOG } from './partsCatalog';
 
 export const INITIAL_USERS: AppUser[] = [
   {
@@ -70,12 +71,7 @@ export const INITIAL_ORDERS: RepairOrder[] = [
   },
 ];
 
-export const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'P-101', name: 'iPhone 13 OLED Display Assembly', sku: 'SCR-IP13', qty: 5 },
-  { id: 'P-102', name: 'Samsung S22 Original Battery', sku: 'BAT-S22', qty: 12 },
-  { id: 'P-103', name: 'Type-C Fast Charging Port Flex', sku: 'PRT-TYPC', qty: 24 },
-  { id: 'P-104', name: 'Thermal Paste & Heat Shield Foil', sku: 'THM-PST', qty: 18 },
-];
+export const INITIAL_INVENTORY: InventoryItem[] = COMPREHENSIVE_PARTS_CATALOG;
 
 export const INITIAL_PROFILE: ShopProfile = {
   shopName: 'MOBILE HOSPITAL',
