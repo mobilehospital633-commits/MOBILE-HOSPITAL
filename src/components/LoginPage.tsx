@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
   KeyRound,
   Check,
 } from 'lucide-react';
@@ -120,7 +119,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
 
     if (matchedUser.passwordHash !== cleanPw) {
-      setLoginError('Incorrect password. Please verify your credentials or click a Quick Login demo.');
+      setLoginError('Incorrect password. Please verify your credentials.');
       return;
     }
 
@@ -147,16 +146,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     // Success
     onLogin({
       ...matchedUser,
-      lastLoginAt: new Date().toISOString().split('T')[0],
-    });
-  };
-
-  const handleQuickLogin = (user: AppUser) => {
-    setLoginIdentifier(user.username);
-    setLoginPassword(user.passwordHash);
-    setLoginError('');
-    onLogin({
-      ...user,
       lastLoginAt: new Date().toISOString().split('T')[0],
     });
   };
@@ -341,7 +330,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                       Password
                     </label>
-                    <span className="text-[10px] text-zinc-500">Default demo: admin123</span>
                   </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
@@ -417,46 +405,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <span>Enter Workstation</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-
-                {/* Quick 1-Click Demo Logins */}
-                <div className="mt-6 pt-5 border-t border-zinc-800/80">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-[11px] uppercase font-bold text-zinc-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>1-Click Quick Demo Sign In</span>
-                    </span>
-                    <span className="text-[10px] text-zinc-500">Instant Access</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {users.slice(0, 2).map((u) => {
-                      const isOwner = u.role === 'owner';
-                      return (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => handleQuickLogin(u)}
-                          className="p-2.5 rounded-xl bg-zinc-950/70 hover:bg-zinc-800/70 border border-zinc-800/80 hover:border-zinc-700 text-left transition-all group cursor-pointer flex items-center gap-2.5"
-                        >
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs"
-                            style={{ backgroundColor: u.avatarColor || '#18181b' }}
-                          >
-                            {isOwner ? <Crown className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
-                          </div>
-                          <div className="overflow-hidden flex-1">
-                            <div className="text-xs font-semibold text-zinc-200 truncate group-hover:text-white">
-                              {u.name}
-                            </div>
-                            <div className="text-[10px] text-zinc-500 capitalize">
-                              {u.role} • @{u.username}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </form>
             ) : (
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
@@ -649,14 +597,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         </div>
         <div className="flex items-center gap-3">
           <span>Protected Workshop Terminal</span>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => handleQuickLogin(users[0])}
-            className="text-zinc-300 hover:underline cursor-pointer"
-          >
-            Admin Quick Access
-          </button>
         </div>
       </footer>
     </div>

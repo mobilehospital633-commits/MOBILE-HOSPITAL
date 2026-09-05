@@ -129,7 +129,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     if (matchedUser.passwordHash !== cleanPw) {
-      setLoginError('Incorrect password. Please try again or use a demo account.');
+      setLoginError('Incorrect password. Please try again.');
       return;
     }
 
@@ -222,12 +222,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setTimeout(() => {
       onRegister(newUser);
     }, 600);
-  };
-
-  const handleQuickFill = (u: AppUser) => {
-    setLoginIdentifier(u.username);
-    setLoginPassword(u.passwordHash);
-    setLoginError('');
   };
 
   return (
@@ -400,37 +394,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <KeyRound className="w-4 h-4" />
                 <span>Sign In to System</span>
               </button>
-
-              {/* Quick Fill Demo Section */}
-              <div className="pt-3 border-t border-zinc-100">
-                <p className="text-[11px] text-zinc-500 font-medium mb-2 text-center">
-                  Quick Access Demo Accounts:
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => users[0] && handleQuickFill(users[0])}
-                    className="p-2 border border-zinc-200 hover:border-zinc-300 rounded-lg text-left bg-zinc-50 hover:bg-zinc-100/80 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800">
-                      <Crown className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Shop Owner</span>
-                    </div>
-                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">admin / admin123</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => users[1] && handleQuickFill(users[1])}
-                    className="p-2 border border-zinc-200 hover:border-zinc-300 rounded-lg text-left bg-zinc-50 hover:bg-zinc-100/80 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800">
-                      <Wrench className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Technician</span>
-                    </div>
-                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">alex.tech / tech123</div>
-                  </button>
-                </div>
-              </div>
 
               <div className="text-center pt-2">
                 <button

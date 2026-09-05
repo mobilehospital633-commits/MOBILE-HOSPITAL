@@ -17,6 +17,7 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { LoginPage } from './components/LoginPage';
+import { DeviceLockModal } from './components/DeviceLockModal';
 import { BackupPayload } from './lib/googleDrive';
 
 export default function App() {
@@ -78,6 +79,8 @@ export default function App() {
 
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
+  const [deviceLockOrder, setDeviceLockOrder] = useState<RepairOrder | null>(null);
+  const [isDeviceLockModalOpen, setIsDeviceLockModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Sync to localStorage
@@ -238,6 +241,84 @@ export default function App() {
 
   const handleSaveEditOrder = (updated: RepairOrder) => {
     setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+  };
+
+  const handleOpenDeviceLock = (order?: RepairOrder) => {
+    if (order) {
+      setDeviceLockOrder(order);
+    } else {
+      const target = orders.find((o) => o.isDeviceLocked) || orders.find((o) => o.cost > o.deposit) || orders[0] || null;
+      setDeviceLockOrder(target);
+    }
+    setIsDeviceLockModalOpen(true);
+  };
+
+  const handleLockDevice = (orderId: string, reason: string, unlockCode: string, notes?: string) => {
+    const target = orders.find((o) => o.id === orderId);
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              isDeviceLocked: true,
+              lockReason: reason,
+              unlockCode,
+              lockedAt: new Date().toISOString(),
+              lockNotes: notes,
+            }
+          : o
+      )
+    );
+    setDeviceLockOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            isDeviceLocked: true,
+            lockReason: reason,
+            unlockCode,
+            lockedAt: new Date().toISOString(),
+            lockNotes: notes,
+          }
+        : target
+        ? {
+            ...target,
+            isDeviceLocked: true,
+            lockReason: reason,
+            unlockCode,
+            lockedAt: new Date().toISOString(),
+            lockNotes: notes,
+          }
+        : null
+    );
+  };
+
+  const handleUnlockDevice = (orderId: string, collectPayment?: boolean) => {
+    if (collectPayment) {
+      handleClearBalance(orderId);
+    }
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            isDeviceLocked: false,
+            deposit: collectPayment ? o.cost : o.deposit,
+            status: collectPayment && o.status !== 'Completed' && o.status !== 'Delivered' ? 'Completed' : o.status,
+          };
+        }
+        return o;
+      })
+    );
+    setDeviceLockOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            isDeviceLocked: false,
+            deposit: collectPayment ? prev.cost : prev.deposit,
+            status: collectPayment && prev.status !== 'Completed' && prev.status !== 'Delivered' ? 'Completed' : prev.status,
+          }
+        : null
+    );
   };
 
   const handleDeleteOrder = (orderId: string) => {
@@ -519,6 +600,7 @@ export default function App() {
                 setSettingsSubtab('drive');
                 setCurrentTab('profile');
               }}
+              onOpenDeviceLock={handleOpenDeviceLock}
             />
           )}
 
@@ -540,6 +622,7 @@ export default function App() {
               onEditOrder={(id) => setEditOrderId(id)}
               onDeleteOrder={handleDeleteOrder}
               onOpenReceipt={(id) => setReceiptOrderId(id)}
+              onOpenDeviceLock={handleOpenDeviceLock}
             />
           )}
 
@@ -614,6 +697,18 @@ export default function App() {
         isOpen={!!editOrderId}
         onClose={() => setEditOrderId(null)}
         onSave={handleSaveEditOrder}
+      />
+
+      {/* IMEI Device Lock & Payment Recovery Manager */}
+      <DeviceLockModal
+        isOpen={isDeviceLockModalOpen}
+        onClose={() => setIsDeviceLockModalOpen(false)}
+        order={deviceLockOrder}
+        orders={orders}
+        profile={profile}
+        onLockDevice={handleLockDevice}
+        onUnlockDevice={handleUnlockDevice}
+        onSelectOrder={(selected) => setDeviceLockOrder(selected)}
       />
 
       {/* Authentication (Login & Staff Registration) Modal */}
