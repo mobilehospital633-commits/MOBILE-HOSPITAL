@@ -26,6 +26,13 @@ export interface RepairOrder {
   date: string;
   technician?: string;
   createdBy?: string;
+  // Mobile Lock / Unlock via IMEI for unpaid amounts
+  isDeviceLocked?: boolean;
+  lockedReason?: string;
+  lockedAt?: string;
+  unlockedAt?: string;
+  unlockCode?: string;
+  lockNotes?: string;
 }
 
 export interface InventoryItem {
