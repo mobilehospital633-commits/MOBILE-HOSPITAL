@@ -19,6 +19,7 @@ import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { LoginPage } from './components/LoginPage';
 import { DeviceLockModal } from './components/DeviceLockModal';
+import { DeviceLockTab } from './components/DeviceLockTab';
 import { BackupPayload } from './lib/googleDrive';
 import { cleanImei } from './utils/imei';
 
@@ -281,6 +282,7 @@ export default function App() {
           ? {
               ...o,
               isDeviceLocked: true,
+              lockedReason: reason,
               lockReason: reason,
               unlockCode,
               lockedAt: new Date().toISOString(),
@@ -294,6 +296,7 @@ export default function App() {
         ? {
             ...prev,
             isDeviceLocked: true,
+            lockedReason: reason,
             lockReason: reason,
             unlockCode,
             lockedAt: new Date().toISOString(),
@@ -303,6 +306,7 @@ export default function App() {
         ? {
             ...target,
             isDeviceLocked: true,
+            lockedReason: reason,
             lockReason: reason,
             unlockCode,
             lockedAt: new Date().toISOString(),
@@ -310,6 +314,11 @@ export default function App() {
           }
         : null
     );
+  };
+
+  const handleAddNewOrderWithLock = (newOrder: RepairOrder) => {
+    setOrders((prev) => [newOrder, ...prev]);
+    setDeviceLockOrder(newOrder);
   };
 
   const handleUnlockDevice = (orderId: string, collectPayment?: boolean) => {
@@ -476,6 +485,7 @@ export default function App() {
     dashboard: 'Dashboard Overview',
     'new-order': 'New Repair Order Entry',
     orders: 'Manage Repair Jobs',
+    'device-lock': 'IMEI Mobile Lock & Security Hub',
     inventory: 'Parts Inventory',
     accounts: 'Income & Expense Accounts',
     customers: 'Customer Directory',
@@ -492,6 +502,8 @@ export default function App() {
       return (p1 && p1 === oImei) || (p2 && p2 === oImei);
     });
   }).length;
+
+  const lockedOrdersCount = orders.filter((o) => o.isDeviceLocked).length;
 
   const activeReceiptOrder = orders.find((o) => o.id === receiptOrderId) || null;
   const activeEditOrder = orders.find((o) => o.id === editOrderId) || null;
@@ -516,6 +528,7 @@ export default function App() {
         onTabChange={setCurrentTab}
         profile={profile}
         stolenAlertCount={stolenAlertCount}
+        lockedCount={lockedOrdersCount}
       />
 
       {/* Main Container */}
@@ -719,6 +732,17 @@ export default function App() {
             />
           )}
 
+          {currentTab === 'device-lock' && (
+            <DeviceLockTab
+              orders={orders}
+              profile={profile}
+              onLockDevice={handleLockDevice}
+              onUnlockDevice={handleUnlockDevice}
+              onAddNewOrderWithLock={handleAddNewOrderWithLock}
+              onOpenReceipt={(orderId) => setReceiptOrderId(orderId)}
+            />
+          )}
+
           {currentTab === 'profile' && (
             <SettingsTab
               profile={profile}
@@ -775,6 +799,7 @@ export default function App() {
         onLockDevice={handleLockDevice}
         onUnlockDevice={handleUnlockDevice}
         onSelectOrder={(selected) => setDeviceLockOrder(selected)}
+        onAddNewOrderWithLock={handleAddNewOrderWithLock}
       />
 
       {/* Authentication (Login & Staff Registration) Modal */}

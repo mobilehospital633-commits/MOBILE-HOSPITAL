@@ -63,6 +63,10 @@ export const INITIAL_ORDERS: RepairOrder[] = [
     deposit: 1000.00,
     status: 'Pending',
     date: '2026-09-03',
+    isDeviceLocked: true,
+    lockedReason: 'Unpaid repair diagnosis & component balance',
+    unlockCode: '748291',
+    lockedAt: '2026-09-03T10:30:00.000Z',
   },
 ];
 

@@ -29,6 +29,7 @@ export interface RepairOrder {
   // Mobile Lock / Unlock via IMEI for unpaid amounts
   isDeviceLocked?: boolean;
   lockedReason?: string;
+  lockReason?: string;
   lockedAt?: string;
   unlockedAt?: string;
   unlockCode?: string;
@@ -111,4 +112,4 @@ export interface StolenDeviceRecord {
   matchedOrderId?: string;
 }
 
-export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'stolen-finder' | 'profile';
+export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'stolen-finder' | 'device-lock' | 'profile';

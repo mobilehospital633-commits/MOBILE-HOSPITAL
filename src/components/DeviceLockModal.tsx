@@ -16,10 +16,13 @@ import {
   Search,
   KeyRound,
   FileText,
-  ExternalLink,
+  HelpCircle,
+  CheckCircle2,
+  Cpu,
   Info,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
+import { cleanImei, validateLuhn, decodeTac, formatImeiDisplay } from '../utils/imei';
 
 interface DeviceLockModalProps {
   isOpen: boolean;
@@ -30,6 +33,7 @@ interface DeviceLockModalProps {
   onLockDevice: (orderId: string, reason: string, unlockCode: string, notes?: string) => void;
   onUnlockDevice: (orderId: string, collectPayment?: boolean) => void;
   onSelectOrder: (order: RepairOrder) => void;
+  onAddNewOrderWithLock?: (newOrder: RepairOrder) => void;
 }
 
 export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
@@ -41,8 +45,9 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
   onLockDevice,
   onUnlockDevice,
   onSelectOrder,
+  onAddNewOrderWithLock,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'controls' | 'simulator' | 'slip'>('controls');
+  const [activeSubTab, setActiveSubTab] = useState<'controls' | 'simulator' | 'solutions' | 'slip'>('controls');
   const [imeiSearchQuery, setImeiSearchQuery] = useState('');
   const [lockReason, setLockReason] = useState('');
   const [unlockCode, setUnlockCode] = useState('');
@@ -50,9 +55,11 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedNotice, setCopiedNotice] = useState(false);
   const [inputPin, setInputPin] = useState('');
-  const [pinVerificationResult, setPinVerificationResult] = useState<'success' | 'failed' | null>(null);
+  const [pinVerificationResult, setPinVerificationResult] = useState<'success' | 'failed' | 'bypass' | null>(null);
+  const [modalFeedback, setModalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const curr = profile.currency || '₹';
+  const MASTER_BYPASS_PIN = '999000';
 
   // Generate 6-digit PIN
   const generateRandomPin = () => {
@@ -67,8 +74,13 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
       setLockNotes(order.lockNotes || '');
       setInputPin('');
       setPinVerificationResult(null);
+      setModalFeedback(null);
+    } else if (orders.length > 0) {
+      // Auto-select first order if none selected
+      const target = orders.find((o) => o.isDeviceLocked) || orders.find((o) => o.cost > o.deposit) || orders[0];
+      if (target) onSelectOrder(target);
     }
-  }, [order, curr]);
+  }, [order, orders, curr, onSelectOrder]);
 
   if (!isOpen) return null;
 
@@ -87,21 +99,50 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
       )
     : [];
 
+  const copyToClipboard = (text: string, onDone: () => void) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onDone).catch(() => {
+        fallbackCopy(text, onDone);
+      });
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  };
+
+  const fallbackCopy = (text: string, onDone: () => void) => {
+    try {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      onDone();
+    } catch {
+      // ignore
+    }
+  };
+
   const handleApplyLock = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentOrder) return;
+    if (!currentOrder) {
+      setModalFeedback({ type: 'error', message: 'No repair device is currently selected.' });
+      return;
+    }
     if (!unlockCode.trim()) {
-      alert('Please provide or generate a 6-digit unlock code.');
+      setModalFeedback({ type: 'error', message: 'Please provide or generate a 6-digit release PIN.' });
       return;
     }
     onLockDevice(currentOrder.id, lockReason, unlockCode.trim(), lockNotes.trim());
+    setModalFeedback({ type: 'success', message: `Device ${currentOrder.model} (IMEI: ${currentOrder.imei}) marked as LOCKED.` });
   };
 
   const handleCopyUnlockCode = () => {
     if (!currentOrder?.unlockCode) return;
-    navigator.clipboard.writeText(currentOrder.unlockCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    copyToClipboard(currentOrder.unlockCode, () => {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    });
   };
 
   const getCustomerNoticeMessage = () => {
@@ -111,9 +152,10 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
 
   const handleCopyNotice = () => {
     const text = getCustomerNoticeMessage();
-    navigator.clipboard.writeText(text);
-    setCopiedNotice(true);
-    setTimeout(() => setCopiedNotice(false), 2000);
+    copyToClipboard(text, () => {
+      setCopiedNotice(true);
+      setTimeout(() => setCopiedNotice(false), 2000);
+    });
   };
 
   const handleSendWhatsApp = () => {
@@ -125,7 +167,10 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
 
   const handleVerifySimulatorPin = () => {
     if (!currentOrder) return;
-    if (inputPin.trim() === (currentOrder.unlockCode || unlockCode)) {
+    const pin = inputPin.trim();
+    if (pin === MASTER_BYPASS_PIN) {
+      setPinVerificationResult('bypass');
+    } else if (pin === (currentOrder.unlockCode || unlockCode)) {
       setPinVerificationResult('success');
     } else {
       setPinVerificationResult('failed');
@@ -152,7 +197,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                   IMEI Mobile Lock & Unlock Manager
                 </h3>
                 {isLocked ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white uppercase tracking-wider">
                     LOCKED
                   </span>
                 ) : (
@@ -177,8 +222,8 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-zinc-100 px-6 pt-2 border-b border-zinc-200 flex items-center justify-between text-xs font-semibold gap-2">
-          <div className="flex items-center gap-1">
+        <div className="bg-zinc-100 px-4 sm:px-6 pt-2 border-b border-zinc-200 flex items-center justify-between text-xs font-semibold gap-2 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
             <button
               onClick={() => setActiveSubTab('controls')}
               className={`px-3 py-2 rounded-t-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
@@ -188,7 +233,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
               }`}
             >
               <KeyRound className="w-3.5 h-3.5" />
-              <span>Lock / Unlock Controls</span>
+              <span>Lock Controls</span>
             </button>
             <button
               onClick={() => setActiveSubTab('simulator')}
@@ -199,7 +244,18 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span>Device Screen Simulator</span>
+              <span>PIN Simulator</span>
+            </button>
+            <button
+              onClick={() => setActiveSubTab('solutions')}
+              className={`px-3 py-2 rounded-t-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeSubTab === 'solutions'
+                  ? 'bg-white text-zinc-900 border-t border-x border-zinc-200 shadow-2xs font-bold'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Hardware Guide</span>
             </button>
             <button
               onClick={() => setActiveSubTab('slip')}
@@ -210,19 +266,19 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Lock Notice Slip</span>
+              <span>Hold Slip</span>
             </button>
           </div>
 
-          {/* Quick IMEI search input */}
-          <div className="relative pb-1.5 hidden md:block">
+          {/* Quick IMEI search input - Always visible */}
+          <div className="relative pb-1.5 w-full sm:w-44">
             <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
             <input
               type="text"
               value={imeiSearchQuery}
               onChange={(e) => setImeiSearchQuery(e.target.value)}
-              placeholder="Search by IMEI / Ticket..."
-              className="pl-7 pr-2 py-1 text-xs bg-white border border-zinc-300 rounded-md focus:outline-none focus:border-zinc-900 w-44"
+              placeholder="Search IMEI / ticket..."
+              className="w-full pl-7 pr-2 py-1 text-xs bg-white border border-zinc-300 rounded-md focus:outline-none focus:border-zinc-900"
             />
           </div>
         </div>
@@ -258,13 +314,38 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
           </div>
         )}
 
+        {/* Feedback Message */}
+        {modalFeedback && (
+          <div className={`px-5 py-2.5 text-xs font-semibold flex items-center justify-between ${
+            modalFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-900 border-b border-emerald-200' : 'bg-rose-50 text-rose-900 border-b border-rose-200'
+          }`}>
+            <span>{modalFeedback.message}</span>
+            <button type="button" onClick={() => setModalFeedback(null)} className="cursor-pointer text-zinc-500">✕</button>
+          </div>
+        )}
+
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
           {!currentOrder ? (
-            <div className="text-center py-10 text-zinc-500 space-y-3">
+            <div className="text-center py-8 text-zinc-500 space-y-3">
               <Smartphone className="w-10 h-10 mx-auto text-zinc-300" />
-              <p className="text-sm font-medium">No repair device selected.</p>
-              <p className="text-xs text-zinc-400">Search an IMEI number above or select an order from the repairs table.</p>
+              <p className="text-sm font-medium">Select a device from your repair tickets:</p>
+              <div className="max-w-sm mx-auto">
+                <select
+                  onChange={(e) => {
+                    const target = orders.find((o) => o.id === e.target.value);
+                    if (target) onSelectOrder(target);
+                  }}
+                  className="w-full text-xs p-2 bg-zinc-50 border border-zinc-300 rounded-lg"
+                >
+                  <option value="">-- Choose repair device --</option>
+                  {orders.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.model} (IMEI: {o.imei}) - {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           ) : (
             <>
@@ -273,7 +354,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-sm text-zinc-900">{currentOrder.model}</span>
-                    <span className="text-xs font-mono bg-zinc-200/80 text-zinc-800 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono bg-zinc-200/80 text-zinc-800 px-2 py-0.5 rounded font-bold">
                       IMEI: {currentOrder.imei}
                     </span>
                     <span className="text-xs text-zinc-500 font-medium">Ticket: {currentOrder.id}</span>
@@ -311,7 +392,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                           </div>
                           <div>
                             <div className="text-sm font-bold text-rose-950 flex items-center gap-2">
-                              <span>MOBILE DEVICE IS CURRENTLY LOCKED</span>
+                              <span>DEVICE IS CURRENTLY LOCKED</span>
                               <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-bold">
                                 ACTIVE
                               </span>
@@ -332,7 +413,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                           <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                             Release PIN
                           </div>
-                          <div className="text-lg font-mono font-bold text-rose-700 tracking-wider my-0.5">
+                          <div className="text-lg font-mono font-black text-rose-700 tracking-wider my-0.5">
                             {currentOrder.unlockCode || '849201'}
                           </div>
                           <button
@@ -351,16 +432,22 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => onUnlockDevice(currentOrder.id, true)}
+                            onClick={() => {
+                              onUnlockDevice(currentOrder.id, true);
+                              setModalFeedback({ type: 'success', message: 'Payment collected and device unlocked successfully!' });
+                            }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-98"
-                            title="Collect the pending payment and immediately unlock device"
+                            title="Collect pending payment and immediately unlock device"
                           >
                             <DollarSign className="w-3.5 h-3.5" />
                             <span>Collect {curr}{balance.toFixed(2)} & Unlock</span>
                           </button>
                           <button
                             type="button"
-                            onClick={() => onUnlockDevice(currentOrder.id, false)}
+                            onClick={() => {
+                              onUnlockDevice(currentOrder.id, false);
+                              setModalFeedback({ type: 'success', message: 'Device unlocked without modifying balance.' });
+                            }}
                             className="bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-98"
                             title="Unlock device without modifying financial balance"
                           >
@@ -378,7 +465,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                             title="Send device lock warning & payment link via WhatsApp"
                           >
                             <Send className="w-3.5 h-3.5" />
-                            <span>Send WhatsApp Notice</span>
+                            <span>WhatsApp Notice</span>
                           </button>
                           <button
                             type="button"
@@ -412,7 +499,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                       </div>
 
                       <div className="text-xs text-zinc-600 leading-relaxed">
-                        Applying a device lock secures the mobile using its 15-digit IMEI. When locked, an official release PIN is generated, and a formal payment recovery notice can be sent to the customer via WhatsApp/SMS.
+                        Locking device marks IMEI {currentOrder.imei} with an official release PIN and creates a formal payment recovery notice for the customer.
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -433,7 +520,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-600">
-                              Release Unlock PIN (6 digits) *
+                              Release PIN (6 digits) *
                             </label>
                             <button
                               type="button"
@@ -461,13 +548,13 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
 
                       <div>
                         <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-600 mb-1">
-                          Internal Workshop Notes / IMEI Hold Details (Optional)
+                          Internal Notes (Optional)
                         </label>
                         <input
                           type="text"
                           value={lockNotes}
                           onChange={(e) => setLockNotes(e.target.value)}
-                          placeholder="e.g. Customer promised to pay by Friday via Google Pay"
+                          placeholder="e.g. Promised payment on Saturday"
                           className="w-full border border-zinc-300 rounded-lg p-2 text-xs text-zinc-900 focus:border-zinc-900 focus:outline-none"
                         />
                       </div>
@@ -475,14 +562,14 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                       <div className="pt-2 flex items-center justify-between">
                         <div className="text-[11px] text-zinc-500 flex items-center gap-1.5">
                           <Info className="w-3.5 h-3.5 text-zinc-400" />
-                          <span>IMEI: <strong>{currentOrder.imei}</strong> will be marked locked</span>
+                          <span>IMEI: <strong>{currentOrder.imei}</strong></span>
                         </div>
                         <button
                           type="submit"
                           className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-98"
                         >
                           <Lock className="w-3.5 h-3.5" />
-                          <span>Lock Mobile (IMEI: {currentOrder.imei})</span>
+                          <span>Confirm & Lock Device</span>
                         </button>
                       </div>
                     </form>
@@ -493,7 +580,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>Customer Payment & Lock Notification Message</span>
+                        <span>Customer Payment & Lock Notification</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -524,13 +611,9 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
               {/* VIEW 2: LOCK SCREEN SIMULATOR */}
               {activeSubTab === 'simulator' && (
                 <div className="space-y-4">
-                  <p className="text-xs text-zinc-600">
-                    This interactive simulator showcases the lock display and customer PIN unlock interface for devices with payment holds:
-                  </p>
-
                   <div className="flex justify-center">
                     <div className="w-[300px] bg-zinc-950 text-white rounded-[32px] p-4 shadow-2xl border-4 border-zinc-800 relative overflow-hidden flex flex-col items-center justify-between min-h-[500px]">
-                      {/* Notch / Speaker */}
+                      {/* Notch */}
                       <div className="w-24 h-4 bg-zinc-800 rounded-full mb-3 flex items-center justify-center">
                         <div className="w-3 h-3 rounded-full bg-zinc-900 border border-zinc-700" />
                       </div>
@@ -560,14 +643,10 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                           </div>
                         </div>
 
-                        <p className="text-[10px] text-zinc-400 leading-snug">
-                          Please clear your repair charges to receive the release unlock PIN.
-                        </p>
-
                         {/* PIN Entry Field */}
-                        <div className="pt-3 space-y-2">
+                        <div className="pt-2 space-y-2">
                           <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400">
-                            Enter 6-Digit Unlock PIN
+                            Enter 6-Digit PIN
                           </div>
                           <div className="flex items-center gap-1.5 justify-center">
                             <input
@@ -596,9 +675,14 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                               <span>PIN Verified! Device Unlocked.</span>
                             </div>
                           )}
+                          {pinVerificationResult === 'bypass' && (
+                            <div className="text-[11px] text-amber-300 font-bold bg-amber-950/60 border border-amber-800 rounded p-1">
+                              ★ Master Shop Bypass PIN Accepted!
+                            </div>
+                          )}
                           {pinVerificationResult === 'failed' && (
                             <div className="text-[11px] text-rose-400 font-bold bg-rose-950/60 border border-rose-800 rounded p-1">
-                              Invalid PIN. Contact shop for code.
+                              Invalid PIN. Contact shop support.
                             </div>
                           )}
                         </div>
@@ -606,26 +690,59 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
 
                       {/* Footer Call Shop */}
                       <div className="w-full pt-3 border-t border-zinc-800/80 text-center space-y-1">
-                        <div className="text-[10px] text-zinc-500">Contact Repair Workshop:</div>
-                        <a
-                          href={`tel:${profile.phone}`}
-                          className="inline-flex items-center gap-1 text-[11px] text-sky-400 font-semibold hover:underline"
-                        >
-                          <Phone className="w-3 h-3" />
-                          <span>{profile.phone}</span>
-                        </a>
+                        <div className="text-[10px] text-zinc-500">Contact Workshop:</div>
+                        <div className="text-[11px] text-sky-400 font-semibold">{profile.phone}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* VIEW 3: PRINTABLE LOCK NOTICE SLIP */}
+              {/* VIEW 3: HARDWARE SOLUTIONS */}
+              {activeSubTab === 'solutions' && (
+                <div className="space-y-4 text-xs text-zinc-600">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-indigo-950 space-y-2">
+                    <h5 className="font-bold flex items-center gap-1.5 text-indigo-900">
+                      <Cpu className="w-4 h-4 text-indigo-700" />
+                      <span>How Hardware Locking Works in the Mobile Industry</span>
+                    </h5>
+                    <p className="text-[11px] leading-relaxed">
+                      Web applications cannot remotely freeze an unmanaged phone without an MDM profile or Knox agent installed. Commercial mobile financiers (PayJoy, Samsung Knox, LockIT) enforce hardware locks using 4 standard solutions:
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 space-y-1">
+                      <strong className="text-zinc-900 block">1. Android DPC (afw#setup)</strong>
+                      <span>Configured during phone setup. Overlays full-screen lock until customer clears payment.</span>
+                    </div>
+                    <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 space-y-1">
+                      <strong className="text-zinc-900 block">2. Samsung Knox Guard</strong>
+                      <span>Cloud-linked by IMEI at the hardware TrustZone level. Survives hard resets and Odin flashes.</span>
+                    </div>
+                    <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 space-y-1">
+                      <strong className="text-zinc-900 block">3. CEIR / Sanchar Saathi Portal</strong>
+                      <span>Official Indian government portal to block IMEI on all telecom networks (Airtel, Jio, Vi).</span>
+                    </div>
+                    <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 space-y-1">
+                      <strong className="text-zinc-900 block">4. Workshop Physical Lien Hold</strong>
+                      <span>Repairer retains physical custody under Bailee's lien until service invoice is paid.</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900 text-zinc-200 p-3 rounded-lg text-[11px] space-y-1">
+                    <div className="font-bold text-amber-300">Master Emergency Bypass PIN: {MASTER_BYPASS_PIN}</div>
+                    <div>If a customer forgets their release code, enter {MASTER_BYPASS_PIN} to bypass the lock immediately.</div>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 4: PRINTABLE LOCK NOTICE SLIP */}
               {activeSubTab === 'slip' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-zinc-600">
-                      Printable Device Payment Recovery Slip to attach to customer device packaging or hand over:
+                      Printable Device Payment Recovery Slip:
                     </p>
                     <button
                       type="button"
@@ -678,7 +795,7 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                     </div>
 
                     <div className="bg-rose-50 p-2 rounded-lg text-[10px] text-rose-900 leading-tight">
-                      ⚠️ <strong>DEVICE LOCKED:</strong> This device is held under security lock due to pending repair balance. Clear payment to receive official release code.
+                      ⚠️ <strong>DEVICE LOCKED:</strong> Held under security lock due to pending repair balance.
                     </div>
 
                     {profile.upi && (
@@ -686,10 +803,6 @@ export const DeviceLockModal: React.FC<DeviceLockModalProps> = ({
                         Pay via UPI: <strong className="font-mono text-zinc-900">{profile.upi}</strong>
                       </div>
                     )}
-
-                    <div className="text-[9px] text-zinc-400 pt-1">
-                      Support: {profile.phone} • {profile.email}
-                    </div>
                   </div>
                 </div>
               )}
