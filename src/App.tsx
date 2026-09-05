@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn, Cloud } from 'lucide-react';
-import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser } from './types';
-import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS } from './data';
+import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser, StolenDeviceRecord } from './types';
+import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS, INITIAL_STOLEN_REGISTRY } from './data';
 import { Sidebar } from './components/Sidebar';
 import { DashboardTab } from './components/DashboardTab';
 import { NewOrderTab } from './components/NewOrderTab';
@@ -10,6 +10,7 @@ import { InventoryTab } from './components/InventoryTab';
 import { AccountsTab } from './components/AccountsTab';
 import { CustomersTab } from './components/CustomersTab';
 import { SettingsTab } from './components/SettingsTab';
+import { StolenPhoneFinderTab } from './components/StolenPhoneFinderTab';
 import { ReceiptModal } from './components/ReceiptModal';
 import { EditOrderModal } from './components/EditOrderModal';
 import { MHLogo } from './components/MHLogo';
@@ -19,6 +20,7 @@ import { UserMenu } from './components/UserMenu';
 import { LoginPage } from './components/LoginPage';
 import { DeviceLockModal } from './components/DeviceLockModal';
 import { BackupPayload } from './lib/googleDrive';
+import { cleanImei } from './utils/imei';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
@@ -82,6 +84,24 @@ export default function App() {
   const [deviceLockOrder, setDeviceLockOrder] = useState<RepairOrder | null>(null);
   const [isDeviceLockModalOpen, setIsDeviceLockModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Stolen Mobile Registry State & Persistence
+  const [stolenRegistry, setStolenRegistry] = useState<StolenDeviceRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('mh_stolen_registry');
+      return saved ? JSON.parse(saved) : INITIAL_STOLEN_REGISTRY;
+    } catch {
+      return INITIAL_STOLEN_REGISTRY;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mh_stolen_registry', JSON.stringify(stolenRegistry));
+    } catch (e) {
+      console.error('Failed to persist stolen registry', e);
+    }
+  }, [stolenRegistry]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -371,14 +391,28 @@ export default function App() {
     localStorage.removeItem('mh_inventory');
     localStorage.removeItem('mh_transactions');
     localStorage.removeItem('mh_profile');
+    localStorage.removeItem('mh_stolen_registry');
     setOrders([...INITIAL_ORDERS]);
     setInventory([...INITIAL_INVENTORY]);
     setTransactions([...INITIAL_TRANSACTIONS]);
     setProfile({ ...INITIAL_PROFILE });
+    setStolenRegistry([...INITIAL_STOLEN_REGISTRY]);
   };
 
   const handleImportProfile = (imported: ShopProfile) => {
     setProfile(imported);
+  };
+
+  const handleAddStolenRecord = (record: StolenDeviceRecord) => {
+    setStolenRegistry((prev) => [record, ...prev]);
+  };
+
+  const handleUpdateStolenRecord = (record: StolenDeviceRecord) => {
+    setStolenRegistry((prev) => prev.map((r) => (r.id === record.id ? record : r)));
+  };
+
+  const handleDeleteStolenRecord = (recordId: string) => {
+    setStolenRegistry((prev) => prev.filter((r) => r.id !== recordId));
   };
 
   const handleLogin = (user: AppUser) => {
@@ -433,6 +467,9 @@ export default function App() {
     if (payload.users && Array.isArray(payload.users) && payload.users.length > 0) {
       setUsers(payload.users);
     }
+    if (payload.stolenRegistry && Array.isArray(payload.stolenRegistry)) {
+      setStolenRegistry(payload.stolenRegistry);
+    }
   };
 
   const pageTitles: Record<TabType, string> = {
@@ -443,7 +480,18 @@ export default function App() {
     accounts: 'Income & Expense Accounts',
     customers: 'Customer Directory',
     profile: 'Profile, Receipts & Billing QR',
+    'stolen-finder': 'Stolen Phone Finder & IMEI Radar',
   };
+
+  // Count active repair orders matching stolen IMEI database
+  const stolenAlertCount = orders.filter((o) => {
+    const oImei = cleanImei(o.imei);
+    return oImei && stolenRegistry.some((r) => {
+      const p1 = cleanImei(r.imei);
+      const p2 = cleanImei(r.imei2 || '');
+      return (p1 && p1 === oImei) || (p2 && p2 === oImei);
+    });
+  }).length;
 
   const activeReceiptOrder = orders.find((o) => o.id === receiptOrderId) || null;
   const activeEditOrder = orders.find((o) => o.id === editOrderId) || null;
@@ -467,6 +515,7 @@ export default function App() {
         currentTab={currentTab}
         onTabChange={setCurrentTab}
         profile={profile}
+        stolenAlertCount={stolenAlertCount}
       />
 
       {/* Main Container */}
@@ -601,6 +650,7 @@ export default function App() {
                 setCurrentTab('profile');
               }}
               onOpenDeviceLock={handleOpenDeviceLock}
+              stolenRegistry={stolenRegistry}
             />
           )}
 
@@ -610,6 +660,7 @@ export default function App() {
               onOrderCreated={handleOrderCreated}
               currentUser={currentUser}
               users={users}
+              stolenRegistry={stolenRegistry}
             />
           )}
 
@@ -623,6 +674,8 @@ export default function App() {
               onDeleteOrder={handleDeleteOrder}
               onOpenReceipt={(id) => setReceiptOrderId(id)}
               onOpenDeviceLock={handleOpenDeviceLock}
+              stolenRegistry={stolenRegistry}
+              onOpenStolenFinder={() => setCurrentTab('stolen-finder')}
             />
           )}
 
@@ -650,6 +703,19 @@ export default function App() {
             <CustomersTab
               orders={orders}
               profile={profile}
+            />
+          )}
+
+          {currentTab === 'stolen-finder' && (
+            <StolenPhoneFinderTab
+              profile={profile}
+              orders={orders}
+              stolenRegistry={stolenRegistry}
+              onAddStolenRecord={handleAddStolenRecord}
+              onUpdateStolenRecord={handleUpdateStolenRecord}
+              onDeleteStolenRecord={handleDeleteStolenRecord}
+              onOpenOrderReceipt={(orderId) => setReceiptOrderId(orderId)}
+              onOpenDeviceLock={handleOpenDeviceLock}
             />
           )}
 

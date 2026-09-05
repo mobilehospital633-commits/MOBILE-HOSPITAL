@@ -17,8 +17,10 @@ import {
   Cloud,
   CloudUpload,
   Lock,
+  ShieldAlert,
 } from 'lucide-react';
-import { AccountTransaction, RepairOrder, ShopProfile, TabType } from '../types';
+import { AccountTransaction, RepairOrder, ShopProfile, TabType, StolenDeviceRecord } from '../types';
+import { cleanImei } from '../utils/imei';
 
 interface DashboardTabProps {
   orders: RepairOrder[];
@@ -29,6 +31,7 @@ interface DashboardTabProps {
   onToggleHideTotalBilled?: () => void;
   onOpenCloudBackup?: () => void;
   onOpenDeviceLock?: (order?: RepairOrder) => void;
+  stolenRegistry?: StolenDeviceRecord[];
 }
 
 export const DashboardTab: React.FC<DashboardTabProps> = ({
@@ -40,9 +43,20 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onToggleHideTotalBilled,
   onOpenCloudBackup,
   onOpenDeviceLock,
+  stolenRegistry = [],
 }) => {
   const curr = profile.currency || '₹';
   const totalJobs = orders.length;
+
+  // Detect stolen matches in active shop orders
+  const stolenMatches = orders.filter((o) => {
+    const oImei = cleanImei(o.imei);
+    return oImei && stolenRegistry.some((r) => {
+      const p1 = cleanImei(r.imei);
+      const p2 = cleanImei(r.imei2 || '');
+      return (p1 && p1 === oImei) || (p2 && p2 === oImei);
+    });
+  });
   const inProgressJobs = orders.filter(
     (o) => o.status === 'Pending' || o.status === 'In Progress'
   ).length;
@@ -107,6 +121,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             Create New Order
           </button>
           <button
+            onClick={() => onNavigate('stolen-finder')}
+            className="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors shadow-2xs active:scale-98 cursor-pointer flex items-center gap-1.5"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Stolen Phone Finder</span>
+          </button>
+          <button
             onClick={() => onNavigate('profile')}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border border-zinc-700 active:scale-98 cursor-pointer"
           >
@@ -114,6 +135,38 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Critical In-Shop Stolen Match Banner */}
+      {stolenMatches.length > 0 && (
+        <div className="bg-rose-600 text-white rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md border border-rose-700 animate-fadeIn">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-sm font-black text-xl">
+              🚨
+            </div>
+            <div>
+              <div className="text-sm font-extrabold flex items-center gap-2 flex-wrap text-white uppercase tracking-tight">
+                <span>POLICE ALERT: {stolenMatches.length} Stolen Device{stolenMatches.length > 1 ? 's' : ''} Active on Repair Bench</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-900 text-rose-100 uppercase tracking-wide">
+                  FIR Hold Active
+                </span>
+              </div>
+              <p className="text-xs text-rose-100 mt-0.5">
+                Device IMEI matched national stolen complaint registry. Do not release to customer without police verification.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigate('stolen-finder')}
+              className="px-3.5 py-2 rounded-lg bg-white hover:bg-zinc-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+              <span>Open Stolen Radar ({stolenMatches.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Locked Devices Payment Recovery Alert Banner */}
       {lockedOrders.length > 0 && (

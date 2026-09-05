@@ -85,4 +85,30 @@ export interface AccountTransaction {
   createdAt?: string;
 }
 
-export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'profile';
+export type StolenDeviceStatus = 'stolen' | 'blacklisted' | 'lost' | 'recovered' | 'in_shop_match';
+
+export interface StolenDeviceRecord {
+  id: string;
+  imei: string;
+  imei2?: string;
+  brand: string;
+  model: string;
+  color?: string;
+  serialNumber?: string;
+  policeFirNumber: string;
+  policeStation: string;
+  reportingDate: string;
+  incidentDate: string;
+  incidentLocation: string;
+  ownerName: string;
+  ownerPhone: string;
+  alternateContact?: string;
+  rewardAmount?: number;
+  status: StolenDeviceStatus;
+  reportedBy: string;
+  notes?: string;
+  detectedInShopAt?: string;
+  matchedOrderId?: string;
+}
+
+export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'stolen-finder' | 'profile';
