@@ -19,7 +19,6 @@ import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { LoginPage } from './components/LoginPage';
 import { DeviceLockModal } from './components/DeviceLockModal';
-import { DeviceLockTab } from './components/DeviceLockTab';
 import { BackupPayload } from './lib/googleDrive';
 import { cleanImei } from './utils/imei';
 
@@ -164,25 +163,33 @@ export default function App() {
     const accent = profile.themeAccent || 'slate';
     const root = document.documentElement;
 
-    const applyDark = (isDark: boolean) => {
-      if (isDark) {
+    const applyThemeMode = (mode: string) => {
+      // Clear previous theme mode classes
+      root.classList.remove('dark', 'theme-midnight', 'theme-forest', 'theme-cyber', 'theme-sepia');
+
+      if (mode === 'dark') {
         root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
+      } else if (mode === 'midnight') {
+        root.classList.add('dark', 'theme-midnight');
+      } else if (mode === 'forest') {
+        root.classList.add('dark', 'theme-forest');
+      } else if (mode === 'cyber') {
+        root.classList.add('dark', 'theme-cyber');
+      } else if (mode === 'sepia') {
+        root.classList.add('theme-sepia');
       }
+      root.setAttribute('data-theme', mode);
     };
 
-    if (themeMode === 'dark') {
-      applyDark(true);
-    } else if (themeMode === 'light') {
-      applyDark(false);
-    } else if (themeMode === 'system') {
+    if (themeMode === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyDark(mediaQuery.matches);
+      applyThemeMode(mediaQuery.matches ? 'dark' : 'light');
 
-      const listener = (e: MediaQueryListEvent) => applyDark(e.matches);
+      const listener = (e: MediaQueryListEvent) => applyThemeMode(e.matches ? 'dark' : 'light');
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
+    } else {
+      applyThemeMode(themeMode);
     }
 
     root.setAttribute('data-accent', accent);
@@ -485,7 +492,6 @@ export default function App() {
     dashboard: 'Dashboard Overview',
     'new-order': 'New Repair Order Entry',
     orders: 'Manage Repair Jobs',
-    'device-lock': 'IMEI Mobile Lock & Security Hub',
     inventory: 'Parts Inventory',
     accounts: 'Income & Expense Accounts',
     customers: 'Customer Directory',
@@ -502,8 +508,6 @@ export default function App() {
       return (p1 && p1 === oImei) || (p2 && p2 === oImei);
     });
   }).length;
-
-  const lockedOrdersCount = orders.filter((o) => o.isDeviceLocked).length;
 
   const activeReceiptOrder = orders.find((o) => o.id === receiptOrderId) || null;
   const activeEditOrder = orders.find((o) => o.id === editOrderId) || null;
@@ -528,7 +532,6 @@ export default function App() {
         onTabChange={setCurrentTab}
         profile={profile}
         stolenAlertCount={stolenAlertCount}
-        lockedCount={lockedOrdersCount}
       />
 
       {/* Main Container */}
@@ -729,17 +732,6 @@ export default function App() {
               onDeleteStolenRecord={handleDeleteStolenRecord}
               onOpenOrderReceipt={(orderId) => setReceiptOrderId(orderId)}
               onOpenDeviceLock={handleOpenDeviceLock}
-            />
-          )}
-
-          {currentTab === 'device-lock' && (
-            <DeviceLockTab
-              orders={orders}
-              profile={profile}
-              onLockDevice={handleLockDevice}
-              onUnlockDevice={handleUnlockDevice}
-              onAddNewOrderWithLock={handleAddNewOrderWithLock}
-              onOpenReceipt={(orderId) => setReceiptOrderId(orderId)}
             />
           )}
 

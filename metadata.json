@@ -1,6 +1,6 @@
 {
   "name": "Mobile Repair & Billing Manager",
-  "description": "Repair management system with customer receipts, billing QR codes, IMEI device lock, stolen phone finder & police registry radar, accounts ledger, and inventory tracking.",
+  "description": "Professional mobile workshop management system with customer receipts, billing QR codes, stolen phone finder & police registry radar, accounts ledger, inventory tracking, and multi-theme customization.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

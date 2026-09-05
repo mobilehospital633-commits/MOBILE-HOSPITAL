@@ -121,13 +121,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             Create New Order
           </button>
           <button
-            onClick={() => onNavigate('device-lock')}
-            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors shadow-2xs active:scale-98 cursor-pointer flex items-center gap-1.5"
-          >
-            <Lock className="w-3.5 h-3.5 text-zinc-400" />
-            <span>IMEI Lock Hub</span>
-          </button>
-          <button
             onClick={() => onNavigate('stolen-finder')}
             className="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors shadow-2xs active:scale-98 cursor-pointer flex items-center gap-1.5"
           >

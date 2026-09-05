@@ -69,8 +69,8 @@ export interface ShopProfile {
   themeAccent?: ThemeAccent;
 }
 
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type ThemeAccent = 'slate' | 'emerald' | 'cobalt' | 'amber';
+export type ThemeMode = 'light' | 'dark' | 'midnight' | 'sepia' | 'forest' | 'cyber' | 'system';
+export type ThemeAccent = 'slate' | 'emerald' | 'cobalt' | 'amber' | 'rose' | 'violet' | 'cyan' | 'orange';
 
 export type TransactionType = 'income' | 'expense';
 
@@ -112,4 +112,4 @@ export interface StolenDeviceRecord {
   matchedOrderId?: string;
 }
 
-export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'stolen-finder' | 'device-lock' | 'profile';
+export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'stolen-finder' | 'profile';

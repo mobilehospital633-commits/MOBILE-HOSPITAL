@@ -143,6 +143,38 @@ html[data-accent="amber"] .theme-primary-btn:hover {
   background-color: #b45309 !important;
 }
 
+html[data-accent="rose"] .theme-primary-btn {
+  background-color: #e11d48 !important;
+  color: #ffffff !important;
+}
+html[data-accent="rose"] .theme-primary-btn:hover {
+  background-color: #be123c !important;
+}
+
+html[data-accent="violet"] .theme-primary-btn {
+  background-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+html[data-accent="violet"] .theme-primary-btn:hover {
+  background-color: #6d28d9 !important;
+}
+
+html[data-accent="cyan"] .theme-primary-btn {
+  background-color: #0891b2 !important;
+  color: #ffffff !important;
+}
+html[data-accent="cyan"] .theme-primary-btn:hover {
+  background-color: #0e7490 !important;
+}
+
+html[data-accent="orange"] .theme-primary-btn {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+}
+html[data-accent="orange"] .theme-primary-btn:hover {
+  background-color: #c2410c !important;
+}
+
 /* Sidebar Active Nav Accent Highlights */
 html[data-accent="emerald"] aside nav button.font-semibold {
   background-color: rgba(5, 150, 105, 0.2) !important;
@@ -160,6 +192,199 @@ html[data-accent="amber"] aside nav button.font-semibold {
   background-color: rgba(217, 119, 6, 0.2) !important;
   color: #fbbf24 !important;
   border-left: 3px solid #d97706;
+}
+
+html[data-accent="rose"] aside nav button.font-semibold {
+  background-color: rgba(225, 29, 72, 0.2) !important;
+  color: #fb7185 !important;
+  border-left: 3px solid #f43f5e;
+}
+
+html[data-accent="violet"] aside nav button.font-semibold {
+  background-color: rgba(124, 58, 237, 0.2) !important;
+  color: #c4b5fd !important;
+  border-left: 3px solid #8b5cf6;
+}
+
+html[data-accent="cyan"] aside nav button.font-semibold {
+  background-color: rgba(8, 145, 178, 0.2) !important;
+  color: #67e8f9 !important;
+  border-left: 3px solid #06b6d4;
+}
+
+html[data-accent="orange"] aside nav button.font-semibold {
+  background-color: rgba(234, 88, 12, 0.2) !important;
+  color: #fdba74 !important;
+  border-left: 3px solid #f97316;
+}
+
+/* THEME MODE: Midnight Navy */
+html.theme-midnight body {
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+}
+html.theme-midnight .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #0f172a !important;
+}
+html.theme-midnight .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #0b1120 !important;
+}
+html.theme-midnight .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #1e293b !important;
+}
+html.theme-midnight .border-zinc-200:not(#printableReceipt, #printableReceipt *),
+html.theme-midnight .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  border-color: #1e293b !important;
+}
+html.theme-midnight .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
+  border-color: #334155 !important;
+}
+html.theme-midnight header {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: #1e293b !important;
+}
+html.theme-midnight input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
+html.theme-midnight textarea:not(#printableReceipt textarea),
+html.theme-midnight select:not(#printableReceipt select) {
+  background-color: #0b1120 !important;
+  color: #f8fafc !important;
+  border-color: #1e293b !important;
+}
+html.theme-midnight .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
+  background-color: #1e293b !important;
+}
+html.theme-midnight .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
+  background-color: #334155 !important;
+}
+
+/* THEME MODE: Nordic Forest */
+html.theme-forest body {
+  background-color: #06140e !important;
+  color: #ecfdf5 !important;
+}
+html.theme-forest .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #0d2118 !important;
+}
+html.theme-forest .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #06140e !important;
+}
+html.theme-forest .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #143326 !important;
+}
+html.theme-forest .border-zinc-200:not(#printableReceipt, #printableReceipt *),
+html.theme-forest .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  border-color: #183c2d !important;
+}
+html.theme-forest .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
+  border-color: #23523e !important;
+}
+html.theme-forest header {
+  background-color: rgba(13, 33, 24, 0.95) !important;
+  border-color: #183c2d !important;
+}
+html.theme-forest input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
+html.theme-forest textarea:not(#printableReceipt textarea),
+html.theme-forest select:not(#printableReceipt select) {
+  background-color: #081a13 !important;
+  color: #f0fdf4 !important;
+  border-color: #183c2d !important;
+}
+html.theme-forest .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
+  background-color: #143326 !important;
+}
+html.theme-forest .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
+  background-color: #1c4735 !important;
+}
+
+/* THEME MODE: Cyber Carbon */
+html.theme-cyber body {
+  background-color: #090d16 !important;
+  color: #e2e8f0 !important;
+}
+html.theme-cyber .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #101726 !important;
+}
+html.theme-cyber .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #090d16 !important;
+}
+html.theme-cyber .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #182238 !important;
+}
+html.theme-cyber .border-zinc-200:not(#printableReceipt, #printableReceipt *),
+html.theme-cyber .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  border-color: #1f2d4a !important;
+}
+html.theme-cyber .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
+  border-color: #2d4069 !important;
+}
+html.theme-cyber header {
+  background-color: rgba(16, 23, 38, 0.95) !important;
+  border-color: #1f2d4a !important;
+}
+html.theme-cyber input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
+html.theme-cyber textarea:not(#printableReceipt textarea),
+html.theme-cyber select:not(#printableReceipt select) {
+  background-color: #0a0f1c !important;
+  color: #f8fafc !important;
+  border-color: #1f2d4a !important;
+}
+html.theme-cyber .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
+  background-color: #182238 !important;
+}
+html.theme-cyber .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
+  background-color: #243252 !important;
+}
+
+/* THEME MODE: Warm Sand / Sepia */
+html.theme-sepia body {
+  background-color: #fbf7ee !important;
+  color: #2e2820 !important;
+}
+html.theme-sepia .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #fffdf7 !important;
+}
+html.theme-sepia .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #fbf7ee !important;
+}
+html.theme-sepia .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #f2ead9 !important;
+}
+html.theme-sepia .border-zinc-200:not(#printableReceipt, #printableReceipt *),
+html.theme-sepia .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  border-color: #e7dcce !important;
+}
+html.theme-sepia .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
+  border-color: #d4c6b2 !important;
+}
+html.theme-sepia .text-zinc-900:not(#printableReceipt, #printableReceipt *) {
+  color: #272118 !important;
+}
+html.theme-sepia .text-zinc-800:not(#printableReceipt, #printableReceipt *) {
+  color: #42392d !important;
+}
+html.theme-sepia .text-zinc-700:not(#printableReceipt, #printableReceipt *) {
+  color: #5f5344 !important;
+}
+html.theme-sepia .text-zinc-600:not(#printableReceipt, #printableReceipt *),
+html.theme-sepia .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
+  color: #7d6e5d !important;
+}
+html.theme-sepia header {
+  background-color: rgba(251, 247, 238, 0.95) !important;
+  border-color: #e7dcce !important;
+}
+html.theme-sepia input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
+html.theme-sepia textarea:not(#printableReceipt textarea),
+html.theme-sepia select:not(#printableReceipt select) {
+  background-color: #fffdf7 !important;
+  color: #272118 !important;
+  border-color: #e7dcce !important;
+}
+html.theme-sepia .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
+  background-color: #f2ead9 !important;
+}
+html.theme-sepia .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
+  background-color: #e7dcce !important;
 }
 
 @media print {

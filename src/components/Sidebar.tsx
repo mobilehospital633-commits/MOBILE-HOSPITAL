@@ -9,7 +9,6 @@ import {
   Smartphone,
   Wallet,
   ShieldAlert,
-  Lock,
 } from 'lucide-react';
 import { ShopProfile, TabType } from '../types';
 import { MHLogo } from './MHLogo';
@@ -19,7 +18,6 @@ interface SidebarProps {
   onTabChange: (tab: TabType) => void;
   profile: ShopProfile;
   stolenAlertCount?: number;
-  lockedCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -27,13 +25,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   profile,
   stolenAlertCount = 0,
-  lockedCount = 0,
 }) => {
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'new-order' as TabType, label: 'New Order', icon: PlusCircle },
     { id: 'orders' as TabType, label: 'Manage Repairs', icon: ListCheck },
-    { id: 'device-lock' as TabType, label: 'IMEI Lock Hub', icon: Lock, alertBadge: lockedCount },
     { id: 'stolen-finder' as TabType, label: 'Stolen Phone Finder', icon: ShieldAlert, alertBadge: stolenAlertCount },
     { id: 'inventory' as TabType, label: 'Inventory', icon: Boxes },
     { id: 'accounts' as TabType, label: 'Income & Expense', icon: Wallet },

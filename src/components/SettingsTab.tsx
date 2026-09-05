@@ -582,7 +582,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 leading-relaxed">
-                  Switch between daytime crisp light mode and deep OLED dark mode for bench repairs, plus customize accent highlights. Changes take effect immediately and are saved to your profile.
+                  Choose from 6 curated workshop display themes (Daylight White, OLED Charcoal, Midnight Navy, Warm Sand, Nordic Forest, Cyber Carbon, plus System Auto), along with 8 vivid accent highlights. Changes take effect immediately across all screens and are saved to your profile.
                 </p>
                 <div className="pt-2">
                   <ThemeSelector
