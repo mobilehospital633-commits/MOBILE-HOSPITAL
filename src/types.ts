@@ -80,6 +80,9 @@ export interface ShopProfile {
   hideTotalBilled?: boolean;
   theme?: ThemeMode;
   themeAccent?: ThemeAccent;
+  securityPin?: string;
+  pinAuthEnabled?: boolean;
+  pinHint?: string;
 }
 
 export type ThemeMode = 'light' | 'dark' | 'midnight' | 'sepia' | 'forest' | 'cyber' | 'system';

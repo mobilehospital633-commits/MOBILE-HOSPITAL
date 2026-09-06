@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCw, Plus, QrCode, Eye, EyeOff, LogIn, Cloud } from 'lucide-react';
-import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent, AppUser } from './types';
-import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS, INITIAL_USERS } from './data';
+import { RotateCw, Plus, QrCode, Eye, EyeOff, Cloud, Lock, KeyRound } from 'lucide-react';
+import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent } from './types';
+import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS } from './data';
 import { COMPREHENSIVE_PARTS_CATALOG } from './partsCatalog';
 import { Sidebar } from './components/Sidebar';
 import { DashboardTab } from './components/DashboardTab';
@@ -15,15 +15,14 @@ import { ReceiptModal } from './components/ReceiptModal';
 import { EditOrderModal } from './components/EditOrderModal';
 import { MHLogo } from './components/MHLogo';
 import { ThemeSelector } from './components/ThemeSelector';
-import { AuthModal } from './components/AuthModal';
-import { UserMenu } from './components/UserMenu';
-import { LoginPage } from './components/LoginPage';
+import { PinLoginPage } from './components/PinLoginPage';
+import { PinSetupModal } from './components/PinSetupModal';
 import { DuePaymentsTab } from './components/DuePaymentsTab';
 import { BackupPayload } from './lib/googleDrive';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
-  const [settingsSubtab, setSettingsSubtab] = useState<'general' | 'tax' | 'system' | 'staff' | 'drive'>('tax');
+  const [settingsSubtab, setSettingsSubtab] = useState<'general' | 'tax' | 'system' | 'security' | 'drive'>('tax');
   const [orders, setOrders] = useState<RepairOrder[]>(() => {
     try {
       const saved = localStorage.getItem('mh_orders');
@@ -69,45 +68,25 @@ export default function App() {
     }
   });
 
-  // User Accounts & Authentication State - defaults to null to show Login Page first
-  const [users, setUsers] = useState<AppUser[]>(() => {
+  // PIN Terminal Security Lock State
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('mh_users');
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      const saved = localStorage.getItem('mh_profile');
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p.pinAuthEnabled === false) return false;
+      }
     } catch {
-      return INITIAL_USERS;
+      // fallback
     }
+    return true;
   });
 
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [isPinSetupModalOpen, setIsPinSetupModalOpen] = useState(false);
 
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('mh_users', JSON.stringify(users));
-    } catch (e) {
-      console.error('Failed to persist users', e);
-    }
-  }, [users]);
-
-  useEffect(() => {
-    try {
-      if (currentUser) {
-        localStorage.setItem('mh_current_user', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('mh_current_user');
-      }
-    } catch (e) {
-      console.error('Failed to persist current user', e);
-    }
-  }, [currentUser]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -364,27 +343,6 @@ export default function App() {
     setProfile(imported);
   };
 
-  const handleLogin = (user: AppUser) => {
-    setCurrentUser(user);
-    setIsAuthModalOpen(false);
-  };
-
-  const handleRegister = (newUser: AppUser) => {
-    setUsers((prev) => [...prev, newUser]);
-    setCurrentUser(newUser);
-    setIsAuthModalOpen(false);
-  };
-
-  const handleSignOut = () => {
-    setCurrentUser(null);
-    setAuthModalMode('login');
-    setIsAuthModalOpen(true);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
-  };
-
   const handleToggleHideTotalBilled = () => {
     setProfile((prev) => ({
       ...prev,
@@ -413,9 +371,6 @@ export default function App() {
     if (payload.profile && typeof payload.profile === 'object') {
       setProfile((prev) => ({ ...prev, ...payload.profile }));
     }
-    if (payload.users && Array.isArray(payload.users) && payload.users.length > 0) {
-      setUsers(payload.users);
-    }
   };
 
   const pageTitles: Record<TabType, string> = {
@@ -433,15 +388,23 @@ export default function App() {
   const activeEditOrder = orders.find((o) => o.id === editOrderId) || null;
   const dueOrdersCount = orders.filter((o) => (o.cost || 0) > (o.deposit || 0)).length;
 
-  // Render Login Page first if not authenticated
-  if (!currentUser) {
+  // Render PIN Login Screen if terminal is locked and PIN protection is enabled
+  if (isLocked && profile.pinAuthEnabled !== false) {
     return (
-      <LoginPage
-        users={users}
-        profile={profile}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-      />
+      <>
+        <PinLoginPage
+          profile={profile}
+          onUnlock={() => setIsLocked(false)}
+          onOpenPinSetup={() => setIsPinSetupModalOpen(true)}
+        />
+        <PinSetupModal
+          isOpen={isPinSetupModalOpen}
+          onClose={() => setIsPinSetupModalOpen(false)}
+          profile={profile}
+          onSaveProfile={setProfile}
+          onPinSaved={() => setIsLocked(false)}
+        />
+      </>
     );
   }
 
@@ -542,33 +505,28 @@ export default function App() {
               <span>Create Repair Order</span>
             </button>
 
-            {/* Staff Account & Authentication Menu */}
-            {currentUser ? (
-              <UserMenu
-                currentUser={currentUser}
-                onSignOut={handleSignOut}
-                onOpenSwitchUser={() => {
-                  setAuthModalMode('login');
-                  setIsAuthModalOpen(true);
-                }}
-                onOpenRegister={() => {
-                  setAuthModalMode('register');
-                  setIsAuthModalOpen(true);
-                }}
-              />
-            ) : (
+            {/* PIN Setup & Terminal Lock Controls */}
+            <div className="flex items-center gap-1.5 pl-1 border-l border-zinc-200">
               <button
                 type="button"
-                onClick={() => {
-                  setAuthModalMode('login');
-                  setIsAuthModalOpen(true);
-                }}
-                className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                onClick={() => setIsPinSetupModalOpen(true)}
+                title="Configure Security PIN"
+                className="bg-white hover:bg-zinc-50 text-zinc-700 px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors border border-zinc-200 hover:border-zinc-300 active:scale-98 cursor-pointer shadow-2xs"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sign In</span>
+                <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">PIN Setup</span>
               </button>
-            )}
+
+              <button
+                type="button"
+                onClick={() => setIsLocked(true)}
+                title="Lock Terminal Now (Requires PIN)"
+                className="bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors active:scale-98 cursor-pointer shadow-2xs"
+              >
+                <Lock className="w-3.5 h-3.5 text-zinc-300" />
+                <span>Lock</span>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -593,8 +551,6 @@ export default function App() {
             <NewOrderTab
               profile={profile}
               onOrderCreated={handleOrderCreated}
-              currentUser={currentUser}
-              users={users}
             />
           )}
 
@@ -661,16 +617,8 @@ export default function App() {
               onClearTransactions={handleClearTransactions}
               onResetAllData={handleResetAllData}
               onImportProfile={handleImportProfile}
-              users={users}
-              currentUser={currentUser}
-              onOpenRegister={() => {
-                setAuthModalMode('register');
-                setIsAuthModalOpen(true);
-              }}
-              onSwitchUser={(u) => {
-                setCurrentUser(u);
-              }}
-              onDeleteUser={handleDeleteUser}
+              onOpenPinSetup={() => setIsPinSetupModalOpen(true)}
+              onLockTerminal={() => setIsLocked(true)}
               orders={orders}
               inventory={inventory}
               transactions={transactions}
@@ -698,15 +646,13 @@ export default function App() {
         onSave={handleSaveEditOrder}
       />
 
-      {/* Authentication (Login & Staff Registration) Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen || !currentUser}
-        canClose={!!currentUser}
-        initialMode={authModalMode}
-        users={users}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
+      {/* Security PIN Setup Modal */}
+      <PinSetupModal
+        isOpen={isPinSetupModalOpen}
+        onClose={() => setIsPinSetupModalOpen(false)}
+        profile={profile}
+        onSaveProfile={setProfile}
+        onPinSaved={() => setIsLocked(false)}
       />
     </div>
   );

@@ -13,17 +13,15 @@ import {
   Eye,
   EyeOff,
   Palette,
-  Users,
-  UserPlus,
-  Crown,
-  Briefcase,
-  Wrench,
   Shield,
   Check,
   Lock,
+  Unlock,
   Cloud,
+  KeyRound,
+  AlertCircle,
 } from 'lucide-react';
-import { ShopProfile, ThemeMode, ThemeAccent, AppUser, RepairOrder, InventoryItem, AccountTransaction } from '../types';
+import { ShopProfile, ThemeMode, ThemeAccent, RepairOrder, InventoryItem, AccountTransaction } from '../types';
 import { generateQrCodeDataUrl } from '../utils/qr';
 import { MHLogo } from './MHLogo';
 import { ThemeSelector } from './ThemeSelector';
@@ -38,16 +36,13 @@ interface SettingsTabProps {
   onClearTransactions?: () => void;
   onResetAllData: () => void;
   onImportProfile: (profile: ShopProfile) => void;
-  users?: AppUser[];
-  currentUser?: AppUser | null;
-  onOpenRegister?: () => void;
-  onSwitchUser?: (user: AppUser) => void;
-  onDeleteUser?: (userId: string) => void;
+  onOpenPinSetup?: () => void;
+  onLockTerminal?: () => void;
   orders?: RepairOrder[];
   inventory?: InventoryItem[];
   transactions?: AccountTransaction[];
   onRestoreAllData?: (payload: BackupPayload) => void;
-  initialSubtab?: 'general' | 'tax' | 'system' | 'staff' | 'drive';
+  initialSubtab?: 'general' | 'tax' | 'system' | 'security' | 'drive';
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -58,21 +53,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onClearTransactions,
   onResetAllData,
   onImportProfile,
-  users = [],
-  currentUser,
-  onOpenRegister,
-  onSwitchUser,
-  onDeleteUser,
+  onOpenPinSetup,
+  onLockTerminal,
   orders = [],
   inventory = [],
   transactions = [],
   onRestoreAllData,
   initialSubtab = 'tax',
 }) => {
-  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'staff' | 'drive'>(initialSubtab);
+  const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'security' | 'drive'>(initialSubtab);
   const [formData, setFormData] = useState<ShopProfile>(profile);
   const [previewQrUrl, setPreviewQrUrl] = useState<string>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [pinChangeSuccess, setPinChangeSuccess] = useState('');
+  const [pinChangeError, setPinChangeError] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [showPinInput, setShowPinInput] = useState(false);
 
   useEffect(() => {
     if (initialSubtab) {
@@ -230,15 +227,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setSubtab('staff')}
+            onClick={() => setSubtab('security')}
             className={`pb-3 border-b-2 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap ${
-              subtab === 'staff'
+              subtab === 'security'
                 ? 'border-zinc-900 text-zinc-900'
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>Staff & Accounts ({users.length})</span>
+            <Shield className="w-3.5 h-3.5 text-emerald-600" />
+            <span>PIN & Security</span>
           </button>
           <button
             type="button"
@@ -733,176 +730,254 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           )}
 
-          {/* SUBTAB 4: Staff & Accounts */}
-          {subtab === 'staff' && (
+          {/* SUBTAB 4: PIN & Terminal Security */}
+          {subtab === 'security' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-                    Workshop Staff & Technician Directory
+                    Counter Terminal PIN Security
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Manage registered technicians, store managers, and administrative logins for this workstation.
+                    Fast numeric PIN protection for customer billing records, cash ledger, and repair jobs.
                   </p>
                 </div>
-                {onOpenRegister && (
+                {onLockTerminal && (
                   <button
                     type="button"
-                    onClick={onOpenRegister}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer active:scale-98 self-start sm:self-auto"
+                    onClick={onLockTerminal}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer active:scale-98 self-start sm:self-auto"
                   >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Register New Staff</span>
+                    <Lock className="w-3.5 h-3.5 text-zinc-300" />
+                    <span>Lock Terminal Now</span>
                   </button>
                 )}
               </div>
 
-              {/* Staff Cards List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {users.map((u) => {
-                  const isCurrent = currentUser?.id === u.id;
-                  const initials = u.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .substring(0, 2)
-                    .toUpperCase();
-
-                  const roleStyle =
-                    u.role === 'owner'
-                      ? { bg: 'bg-amber-100 text-amber-800 border-amber-200', icon: Crown }
-                      : u.role === 'manager'
-                      ? { bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: Briefcase }
-                      : { bg: 'bg-blue-100 text-blue-800 border-blue-200', icon: Wrench };
-
-                  const RoleIcon = roleStyle.icon;
-
-                  return (
-                    <div
-                      key={u.id}
-                      className={`p-4 rounded-xl border transition-all ${
-                        isCurrent
-                          ? 'border-zinc-900 bg-zinc-50/70 shadow-xs ring-1 ring-zinc-900/10'
-                          : 'border-zinc-200 bg-white hover:border-zinc-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0"
-                            style={{ backgroundColor: u.avatarColor || '#18181b' }}
-                          >
-                            {initials}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-zinc-900 leading-tight">
-                                {u.name}
-                              </h4>
-                              {isCurrent && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  Active Session
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-xs font-mono text-zinc-500">
-                              @{u.username}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${roleStyle.bg}`}
-                        >
-                          <RoleIcon className="w-3 h-3" />
-                          <span>{u.role}</span>
-                        </span>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-600">
-                        <div>
-                          <span className="text-[10px] text-zinc-400 uppercase font-semibold block">
-                            Email
-                          </span>
-                          <span className="truncate block font-medium">{u.email}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-400 uppercase font-semibold block">
-                            Phone
-                          </span>
-                          <span className="font-medium">{u.phone || 'Not provided'}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400">
-                          Joined {u.createdAt || 'Recent'}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {!isCurrent && onSwitchUser && (
-                            <button
-                              type="button"
-                              onClick={() => onSwitchUser(u)}
-                              className="text-xs text-zinc-700 hover:text-zinc-900 font-semibold hover:underline cursor-pointer"
-                            >
-                              Switch to User
-                            </button>
-                          )}
-                          {!isCurrent && u.role !== 'owner' && onDeleteUser && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm(`Remove staff member "${u.name}"?`)) {
-                                  onDeleteUser(u.id);
-                                }
-                              }}
-                              className="text-xs text-rose-600 hover:text-rose-800 font-semibold hover:underline cursor-pointer ml-2"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      </div>
+              {/* Status Banner */}
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      formData.pinAuthEnabled !== false
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-zinc-200 text-zinc-600'
+                    }`}
+                  >
+                    {formData.pinAuthEnabled !== false ? (
+                      <Shield className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <Unlock className="w-5 h-5 text-zinc-500" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-zinc-900">
+                        {formData.pinAuthEnabled !== false
+                          ? 'PIN Lock Active'
+                          : 'PIN Lock Disabled'}
+                      </h4>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          formData.pinAuthEnabled !== false
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : 'bg-zinc-200 text-zinc-700'
+                        }`}
+                      >
+                        {formData.pinAuthEnabled !== false ? 'PROTECTED' : 'OPEN ACCESS'}
+                      </span>
                     </div>
-                  );
-                })}
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Current Security PIN:{' '}
+                      <span className="font-mono font-bold text-zinc-800">
+                        {showPinInput ? formData.securityPin || '1234' : '••••'}
+                      </span>{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowPinInput((p) => !p)}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-800 font-medium underline ml-1 cursor-pointer"
+                      >
+                        {showPinInput ? 'Hide' : 'Reveal'}
+                      </button>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {onOpenPinSetup && (
+                    <button
+                      type="button"
+                      onClick={onOpenPinSetup}
+                      className="px-3 py-1.5 bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 rounded-lg text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Configure in Keypad</span>
+                    </button>
+                  )}
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={formData.pinAuthEnabled !== false}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pinAuthEnabled: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
               </div>
 
-              {/* Roles & Security Card */}
+              {/* Quick Change PIN Form Card */}
+              <div className="p-5 rounded-xl border border-zinc-200 bg-white space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-zinc-700" />
+                    <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                      Setup / Change Security PIN
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-zinc-400">4 to 6 numeric digits</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                      New Security PIN
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={newPinInput}
+                      onChange={(e) => setNewPinInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="e.g. 5824"
+                      className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm font-mono tracking-widest text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                      Confirm New PIN
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={confirmPinInput}
+                      onChange={(e) => setConfirmPinInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Repeat new PIN"
+                      className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm font-mono tracking-widest text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                    PIN Reminder / Hint
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.pinHint || ''}
+                    onChange={(e) => setFormData({ ...formData, pinHint: e.target.value })}
+                    placeholder="e.g. Counter bench safe key or birth year"
+                    className="w-full border border-zinc-200 rounded-lg p-2.5 text-xs text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
+                  />
+                  <span className="text-[10px] text-zinc-400 mt-1 block">
+                    Shown when tapping &quot;Forgot PIN?&quot; on the lock screen.
+                  </span>
+                </div>
+
+                {pinChangeError && (
+                  <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{pinChangeError}</span>
+                  </div>
+                )}
+
+                {pinChangeSuccess && (
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span className="font-semibold">{pinChangeSuccess}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        securityPin: '1234',
+                        pinHint: 'Default PIN is 1234',
+                      });
+                      setNewPinInput('');
+                      setConfirmPinInput('');
+                      setPinChangeSuccess('PIN reset to default "1234"');
+                      setTimeout(() => setPinChangeSuccess(''), 2500);
+                    }}
+                    className="text-xs text-zinc-500 hover:text-rose-600 font-medium hover:underline cursor-pointer"
+                  >
+                    Reset PIN to Default (1234)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPinChangeError('');
+                      setPinChangeSuccess('');
+                      if (!newPinInput) {
+                        setPinChangeError('Please enter a new 4-6 digit numeric PIN.');
+                        return;
+                      }
+                      if (!/^[0-9]{4,6}$/.test(newPinInput)) {
+                        setPinChangeError('PIN must be 4 to 6 numeric digits.');
+                        return;
+                      }
+                      if (newPinInput !== confirmPinInput) {
+                        setPinChangeError('New PIN and Confirm PIN do not match.');
+                        return;
+                      }
+                      const updated = {
+                        ...formData,
+                        securityPin: newPinInput,
+                        pinHint: formData.pinHint || `Starts with ${newPinInput[0]}`,
+                      };
+                      setFormData(updated);
+                      onSaveProfile(updated);
+                      setNewPinInput('');
+                      setConfirmPinInput('');
+                      setPinChangeSuccess('New Security PIN saved successfully!');
+                      setTimeout(() => setPinChangeSuccess(''), 2500);
+                    }}
+                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                  >
+                    Apply New PIN
+                  </button>
+                </div>
+              </div>
+
+              {/* Security Guidance Card */}
               <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-4 h-4 text-zinc-700" />
                   <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                    Role-Based Access Overview
+                    Counter Access & Security Architecture
                   </h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-zinc-600">
-                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
-                    <div className="flex items-center gap-1.5 font-bold text-amber-800 mb-1">
-                      <Crown className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Shop Owner</span>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-zinc-600">
+                  <div className="p-3 rounded-lg bg-white border border-zinc-200/80">
+                    <span className="font-bold text-zinc-900 block mb-1">
+                      Fast 4-Digit Counter Lock
+                    </span>
                     <p className="text-[11px] text-zinc-500 leading-relaxed">
-                      Complete administrative access to total billed figures, tax invoice rates, system resets, and staff directory.
+                      Staff authentication has been simplified into instant PIN authorization. Whenever you step away from the counter, click the &quot;Lock&quot; button in the top bar to lock down tickets, payments, and inventory.
                     </p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-800 mb-1">
-                      <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Store Manager</span>
-                    </div>
+                  <div className="p-3 rounded-lg bg-white border border-zinc-200/80">
+                    <span className="font-bold text-zinc-900 block mb-1">
+                      Master Recovery & Safeguards
+                    </span>
                     <p className="text-[11px] text-zinc-500 leading-relaxed">
-                      Can create & edit repair tickets, record cash/UPI deposits, manage parts inventory, and log daily shop expenses.
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-zinc-200/80">
-                    <div className="flex items-center gap-1.5 font-bold text-blue-800 mb-1">
-                      <Wrench className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Hardware Technician</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 leading-relaxed">
-                      Assigned to diagnosis, screen and component replacements, repair status updates, and customer pickup verification.
+                      If you ever forget your custom PIN, the default factory PIN is <span className="font-mono font-bold text-zinc-800">1234</span>. You can also use the Master Recovery code <span className="font-mono font-bold text-zinc-800">0000</span> or the last 4 digits of the shop phone number to reset access at any time.
                     </p>
                   </div>
                 </div>
@@ -918,7 +993,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 inventory={inventory}
                 transactions={transactions}
                 profile={profile}
-                users={users}
+                users={[]}
                 onRestoreAllData={onRestoreAllData || (() => {})}
               />
             </div>

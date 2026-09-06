@@ -1,21 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { PlusCircle, Receipt, QrCode, Sparkles, UserCheck, CheckCircle2 } from 'lucide-react';
-import { RepairOrder, ShopProfile, AppUser } from '../types';
+import { RepairOrder, ShopProfile } from '../types';
 import { cleanImei, decodeTac, validateLuhn } from '../utils/imei';
 import { ALL_BRANDS, getAllModels, getModelsForBrand } from '../brandModels';
 
 interface NewOrderTabProps {
   profile: ShopProfile;
   onOrderCreated: (order: RepairOrder) => void;
-  currentUser?: AppUser | null;
-  users?: AppUser[];
 }
 
 export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   profile,
   onOrderCreated,
-  currentUser,
-  users = [],
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -25,7 +21,7 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   const [cost, setCost] = useState('');
   const [deposit, setDeposit] = useState('0.00');
   const [status, setStatus] = useState<RepairOrder['status']>(profile.defaultStatus || 'Pending');
-  const [technician, setTechnician] = useState(currentUser?.name || '');
+  const [technician, setTechnician] = useState('Main Bench');
 
   const curr = profile.currency || '₹';
 
@@ -51,8 +47,8 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
       deposit: numDeposit,
       status: status,
       date: new Date().toISOString().split('T')[0],
-      technician: technician.trim() || currentUser?.name || 'Workshop Bench',
-      createdBy: currentUser?.name || 'Staff',
+      technician: technician.trim() || 'Workshop Bench',
+      createdBy: 'Counter Terminal',
     };
 
     onOrderCreated(newOrder);
@@ -255,28 +251,20 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
               <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
                 Assigned Tech
               </label>
-              {users.length > 0 ? (
-                <select
-                  value={technician}
-                  onChange={(e) => setTechnician(e.target.value)}
-                  className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors bg-white"
-                >
-                  <option value="">-- Select Staff --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.name}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={technician}
-                  onChange={(e) => setTechnician(e.target.value)}
-                  placeholder="Technician Name"
-                  className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              )}
+              <input
+                type="text"
+                list="tech-suggestions"
+                value={technician}
+                onChange={(e) => setTechnician(e.target.value)}
+                placeholder="e.g. Main Bench or Tech Name"
+                className="w-full border border-zinc-200 rounded-lg p-2.5 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
+              />
+              <datalist id="tech-suggestions">
+                <option value="Main Bench" />
+                <option value="Senior Tech" />
+                <option value="Hardware Specialist" />
+                <option value="Screen Replacement" />
+              </datalist>
             </div>
           </div>
 

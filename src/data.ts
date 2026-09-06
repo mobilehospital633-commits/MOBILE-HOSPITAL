@@ -117,6 +117,9 @@ export const INITIAL_PROFILE: ShopProfile = {
   hideTotalBilled: false,
   theme: 'light',
   themeAccent: 'slate',
+  securityPin: '1234',
+  pinAuthEnabled: true,
+  pinHint: 'Default PIN is 1234',
 };
 
 export const INITIAL_TRANSACTIONS: AccountTransaction[] = [
