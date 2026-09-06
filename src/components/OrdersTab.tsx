@@ -10,10 +10,8 @@ import {
   Wrench,
   Lock,
   Unlock,
-  ShieldAlert,
 } from 'lucide-react';
-import { RepairOrder, ShopProfile, StolenDeviceRecord } from '../types';
-import { cleanImei } from '../utils/imei';
+import { RepairOrder, ShopProfile } from '../types';
 
 interface OrdersTabProps {
   orders: RepairOrder[];
@@ -24,8 +22,6 @@ interface OrdersTabProps {
   onDeleteOrder: (orderId: string) => void;
   onOpenReceipt: (orderId: string) => void;
   onOpenDeviceLock: (order: RepairOrder) => void;
-  stolenRegistry?: StolenDeviceRecord[];
-  onOpenStolenFinder?: () => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -37,8 +33,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onDeleteOrder,
   onOpenReceipt,
   onOpenDeviceLock,
-  stolenRegistry = [],
-  onOpenStolenFinder,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -81,19 +75,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          {/* Quick Stolen Radar button */}
-          {onOpenStolenFinder && (
-            <button
-              type="button"
-              onClick={onOpenStolenFinder}
-              className="px-3 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-              title="Open Stolen Phone Finder & IMEI Radar"
-            >
-              <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-              <span>Stolen Finder</span>
-            </button>
-          )}
-
           {/* Quick IMEI Lock Manager Tool Button */}
           <button
             type="button"
@@ -160,29 +141,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 filteredOrders.map((o) => {
                   const balance = Math.max(0, o.cost - o.deposit);
                   const isLocked = !!o.isDeviceLocked;
-                  const cleanOImei = cleanImei(o.imei);
-                  const stolenAlert = stolenRegistry.find((r) => {
-                    const p1 = cleanImei(r.imei);
-                    const p2 = cleanImei(r.imei2 || '');
-                    return cleanOImei && ((p1 && p1 === cleanOImei) || (p2 && p2 === cleanOImei));
-                  });
 
                   return (
                     <tr
                       key={o.id}
-                      className={`hover:bg-zinc-50/60 transition-colors ${
-                        stolenAlert ? 'bg-rose-50/30' : ''
-                      }`}
+                      className="hover:bg-zinc-50/60 transition-colors"
                     >
                       {/* Ticket */}
                       <td className="py-3.5 px-5">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-zinc-900">{o.id}</span>
-                          {stolenAlert && (
-                            <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white text-[9px] font-black uppercase">
-                              STOLEN!
-                            </span>
-                          )}
                         </div>
                         <span className="text-xs text-zinc-400 font-normal">{o.date}</span>
                       </td>
@@ -200,17 +168,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           <span className="text-xs text-zinc-500 font-mono font-medium">
                             IMEI: {o.imei}
                           </span>
-                          {stolenAlert && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenStolenFinder?.()}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-black bg-rose-600 hover:bg-rose-700 text-white shadow-2xs animate-pulse transition-colors cursor-pointer"
-                              title={`STOLEN IMEI MATCH! FIR #${stolenAlert.policeFirNumber} (${stolenAlert.policeStation}). Owner: ${stolenAlert.ownerName}. Click to open Stolen Phone Finder.`}
-                            >
-                              <ShieldAlert className="w-2.5 h-2.5" />
-                              <span>STOLEN MATCH</span>
-                            </button>
-                          )}
                           {isLocked ? (
                             <button
                               type="button"

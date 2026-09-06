@@ -8,7 +8,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { RepairOrder, InventoryItem, AccountTransaction, ShopProfile, AppUser, StolenDeviceRecord } from '../types';
+import { RepairOrder, InventoryItem, AccountTransaction, ShopProfile, AppUser } from '../types';
 
 // OAuth scopes configured for Google Drive backup
 export const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
@@ -47,13 +47,11 @@ export interface BackupPayload {
   transactions: AccountTransaction[];
   profile: ShopProfile;
   users: AppUser[];
-  stolenRegistry?: StolenDeviceRecord[];
   stats: {
     totalOrders: number;
     totalInventoryItems: number;
     totalTransactions: number;
     totalUsers: number;
-    totalStolenRecords?: number;
   };
 }
 

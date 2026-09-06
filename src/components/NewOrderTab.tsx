@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { PlusCircle, Receipt, QrCode, Sparkles, UserCheck, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { RepairOrder, ShopProfile, AppUser, StolenDeviceRecord } from '../types';
+import { PlusCircle, Receipt, QrCode, Sparkles, UserCheck, CheckCircle2 } from 'lucide-react';
+import { RepairOrder, ShopProfile, AppUser } from '../types';
 import { cleanImei, decodeTac, validateLuhn } from '../utils/imei';
 import { ALL_BRANDS, getAllModels, getModelsForBrand } from '../brandModels';
 
@@ -9,7 +9,6 @@ interface NewOrderTabProps {
   onOrderCreated: (order: RepairOrder) => void;
   currentUser?: AppUser | null;
   users?: AppUser[];
-  stolenRegistry?: StolenDeviceRecord[];
 }
 
 export const NewOrderTab: React.FC<NewOrderTabProps> = ({
@@ -17,7 +16,6 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   onOrderCreated,
   currentUser,
   users = [],
-  stolenRegistry = [],
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -30,13 +28,6 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
   const [technician, setTechnician] = useState(currentUser?.name || '');
 
   const curr = profile.currency || '₹';
-
-  const cleanCurrentImei = cleanImei(imei);
-  const stolenMatch = stolenRegistry.find((r) => {
-    const p1 = cleanImei(r.imei);
-    const p2 = cleanImei(r.imei2 || '');
-    return cleanCurrentImei && ((p1 && p1 === cleanCurrentImei) || (p2 && p2 === cleanCurrentImei));
-  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,29 +185,8 @@ export const NewOrderTab: React.FC<NewOrderTabProps> = ({
                   }
                 }}
                 placeholder="15-digit IMEI or Serial Number"
-                className={`w-full border rounded-lg p-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition-colors ${
-                  stolenMatch
-                    ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-500/20'
-                    : 'border-zinc-200 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10'
-                }`}
+                className="w-full border border-zinc-200 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 rounded-lg p-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition-colors"
               />
-
-              {/* Stolen IMEI Match Alert */}
-              {stolenMatch && (
-                <div className="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-950 text-xs animate-fadeIn space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-rose-700">
-                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>CRITICAL POLICE ALERT: REPORTED STOLEN DEVICE</span>
-                  </div>
-                  <p className="text-[11px] text-rose-900 leading-relaxed">
-                    This IMEI is registered as stolen under <strong>FIR #{stolenMatch.policeFirNumber}</strong> ({stolenMatch.policeStation}).
-                    Registered Owner: <strong>{stolenMatch.ownerName}</strong> ({stolenMatch.ownerPhone}).
-                  </p>
-                  <div className="text-[10px] text-rose-800 font-semibold pt-0.5">
-                    ⚠ Warning: Do not accept or flash this device without police intimation.
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 

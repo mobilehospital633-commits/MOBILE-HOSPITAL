@@ -8,7 +8,6 @@ import {
   Sliders,
   Smartphone,
   Wallet,
-  ShieldAlert,
 } from 'lucide-react';
 import { ShopProfile, TabType } from '../types';
 import { MHLogo } from './MHLogo';
@@ -17,20 +16,17 @@ interface SidebarProps {
   currentTab: TabType;
   onTabChange: (tab: TabType) => void;
   profile: ShopProfile;
-  stolenAlertCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onTabChange,
   profile,
-  stolenAlertCount = 0,
 }) => {
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'new-order' as TabType, label: 'New Order', icon: PlusCircle },
     { id: 'orders' as TabType, label: 'Manage Repairs', icon: ListCheck },
-    { id: 'stolen-finder' as TabType, label: 'Stolen Phone Finder', icon: ShieldAlert, alertBadge: stolenAlertCount },
     { id: 'inventory' as TabType, label: 'Inventory', icon: Boxes },
     { id: 'accounts' as TabType, label: 'Income & Expense', icon: Wallet },
     { id: 'customers' as TabType, label: 'Customers', icon: Users },
@@ -76,11 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
               <span className="truncate flex-1 text-left">{item.label}</span>
-              {item.alertBadge && item.alertBadge > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse">
-                  {item.alertBadge}
-                </span>
-              ) : null}
             </button>
           );
         })}
