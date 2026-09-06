@@ -8,8 +8,6 @@ import {
   QrCode,
   Filter,
   Wrench,
-  Lock,
-  Unlock,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
 
@@ -21,7 +19,6 @@ interface OrdersTabProps {
   onEditOrder: (orderId: string) => void;
   onDeleteOrder: (orderId: string) => void;
   onOpenReceipt: (orderId: string) => void;
-  onOpenDeviceLock: (order: RepairOrder) => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -32,13 +29,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onEditOrder,
   onDeleteOrder,
   onOpenReceipt,
-  onOpenDeviceLock,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
   const curr = profile.currency || '₹';
-  const lockedCount = orders.filter((o) => o.isDeviceLocked).length;
 
   const filteredOrders = orders.filter((o) => {
     const q = searchTerm.toLowerCase();
@@ -50,9 +45,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       o.imei.toLowerCase().includes(q);
 
     let matchesStatus = true;
-    if (statusFilter === 'Locked') {
-      matchesStatus = !!o.isDeviceLocked;
-    } else if (statusFilter !== 'All') {
+    if (statusFilter !== 'All') {
       matchesStatus = o.status === statusFilter;
     }
 
@@ -75,26 +68,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          {/* Quick IMEI Lock Manager Tool Button */}
-          <button
-            type="button"
-            onClick={() => {
-              // Open modal with first locked order or first order with unpaid balance or first order
-              const target = orders.find((o) => o.isDeviceLocked) || orders.find((o) => o.cost > o.deposit) || orders[0];
-              if (target) onOpenDeviceLock(target);
-            }}
-            className="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-            title="Open IMEI Device Lock & Payment Recovery Manager"
-          >
-            <Lock className="w-3.5 h-3.5 text-rose-600" />
-            <span>IMEI Lock Tool</span>
-            {lockedCount > 0 && (
-              <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-                {lockedCount}
-              </span>
-            )}
-          </button>
-
           <div className="flex items-center gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 whitespace-nowrap flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" />
@@ -110,7 +83,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
               <option value="Delivered">Delivered</option>
-              <option value="Locked">🔒 Locked Devices ({lockedCount})</option>
             </select>
           </div>
         </div>
@@ -140,7 +112,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               ) : (
                 filteredOrders.map((o) => {
                   const balance = Math.max(0, o.cost - o.deposit);
-                  const isLocked = !!o.isDeviceLocked;
 
                   return (
                     <tr
@@ -168,21 +139,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           <span className="text-xs text-zinc-500 font-mono font-medium">
                             IMEI: {o.imei}
                           </span>
-                          {isLocked ? (
-                            <button
-                              type="button"
-                              onClick={() => onOpenDeviceLock(o)}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-rose-600 text-white shadow-2xs hover:bg-rose-700 transition-colors cursor-pointer"
-                              title={`Device locked for unpaid balance of ${curr}${balance.toFixed(2)}. Click to view or unlock.`}
-                            >
-                              <Lock className="w-2.5 h-2.5" />
-                              <span>LOCKED</span>
-                            </button>
-                          ) : balance > 0 ? (
-                            <span className="text-[10px] text-zinc-400 font-normal">
-                              (Unlocked)
-                            </span>
-                          ) : null}
                         </div>
                         {o.technician && (
                           <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium mt-0.5">
@@ -224,33 +180,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       {/* Actions */}
                       <td className="py-3.5 px-5 text-center">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {/* Device Lock / Unlock button */}
-                          {isLocked ? (
-                            <button
-                              type="button"
-                              onClick={() => onOpenDeviceLock(o)}
-                              title="Device is locked! Click to unlock or collect payment"
-                              className="bg-rose-600 hover:bg-rose-700 text-white px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs active:scale-98"
-                            >
-                              <Unlock className="w-3.5 h-3.5" />
-                              <span>Unlock</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onOpenDeviceLock(o)}
-                              title={balance > 0 ? `Lock mobile using IMEI for unpaid balance (${curr}${balance.toFixed(2)})` : 'Manage device lock status via IMEI'}
-                              className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 border transition-colors cursor-pointer ${
-                                balance > 0
-                                  ? 'text-rose-700 border-rose-200 bg-rose-50/50 hover:bg-rose-100'
-                                  : 'text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-800'
-                              }`}
-                            >
-                              <Lock className="w-3.5 h-3.5" />
-                              <span>{balance > 0 ? 'Lock Mobile' : 'Lock'}</span>
-                            </button>
-                          )}
-
                           {balance > 0 && (
                             <button
                               onClick={() => onClearBalance(o.id)}

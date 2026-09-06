@@ -16,7 +16,7 @@ import {
   EyeOff,
   Cloud,
   CloudUpload,
-  Lock,
+  CreditCard,
 } from 'lucide-react';
 import { AccountTransaction, RepairOrder, ShopProfile, TabType } from '../types';
 
@@ -28,7 +28,6 @@ interface DashboardTabProps {
   onOpenReceipt: (orderId: string) => void;
   onToggleHideTotalBilled?: () => void;
   onOpenCloudBackup?: () => void;
-  onOpenDeviceLock?: (order?: RepairOrder) => void;
 }
 
 export const DashboardTab: React.FC<DashboardTabProps> = ({
@@ -39,7 +38,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onOpenReceipt,
   onToggleHideTotalBilled,
   onOpenCloudBackup,
-  onOpenDeviceLock,
 }) => {
   const curr = profile.currency || '₹';
   const totalJobs = orders.length;
@@ -51,13 +49,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     (o) => o.status === 'Completed' || o.status === 'Delivered'
   ).length;
   const totalRevenue = orders.reduce((sum, o) => sum + (o.cost || 0), 0);
-  const totalDue = orders.reduce(
+  const dueOrders = orders.filter((o) => (o.cost || 0) > (o.deposit || 0));
+  const totalDue = dueOrders.reduce(
     (sum, o) => sum + Math.max(0, (o.cost || 0) - (o.deposit || 0)),
     0
   );
-
-  const lockedOrders = orders.filter((o) => o.isDeviceLocked);
-  const totalLockedDue = lockedOrders.reduce((sum, o) => sum + Math.max(0, o.cost - o.deposit), 0);
 
   // Financial Accounts aggregation
   const accIncome = transactions
@@ -107,6 +103,15 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           >
             Create New Order
           </button>
+          {dueOrders.length > 0 && (
+            <button
+              onClick={() => onNavigate('dues')}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors shadow-2xs active:scale-98 cursor-pointer flex items-center gap-1.5"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Due Payments ({dueOrders.length})</span>
+            </button>
+          )}
           <button
             onClick={() => onNavigate('profile')}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border border-zinc-700 active:scale-98 cursor-pointer"
@@ -116,33 +121,33 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       </div>
 
-      {/* Locked Devices Payment Recovery Alert Banner */}
-      {lockedOrders.length > 0 && (
+      {/* Customer Due Payments Alert Banner */}
+      {dueOrders.length > 0 && (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-950 shadow-2xs">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
-              <Lock className="w-5 h-5" />
+              <CreditCard className="w-5 h-5" />
             </div>
             <div>
               <div className="text-sm font-bold flex items-center gap-2 flex-wrap text-rose-950">
-                <span>{lockedOrders.length} Mobile Device{lockedOrders.length > 1 ? 's' : ''} Locked for Unpaid Balance</span>
+                <span>{dueOrders.length} Customer Repair{dueOrders.length > 1 ? 's' : ''} with Outstanding Balance</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 uppercase tracking-wide">
-                  Total Due: {curr}{totalLockedDue.toFixed(2)}
+                  Total Due: {curr}{totalDue.toFixed(2)}
                 </span>
               </div>
               <p className="text-xs text-rose-800 mt-0.5">
-                Devices are held under IMEI lock security codes until customers settle outstanding repair charges.
+                Check pending customer bills, send WhatsApp payment reminders, or record payments on the separate Due Payments page.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
             <button
               type="button"
-              onClick={() => onOpenDeviceLock?.(lockedOrders[0])}
+              onClick={() => onNavigate('dues')}
               className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Manage IMEI Locks</span>
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Review Due Payments</span>
             </button>
           </div>
         </div>
@@ -366,20 +371,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                         <span className="block text-[11px] text-zinc-400">{o.phone}</span>
                       </td>
                       <td className="py-3 px-5 text-zinc-700">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-zinc-800">{o.model}</span>
-                          {o.isDeviceLocked && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenDeviceLock?.(o)}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-600 text-white shadow-2xs hover:bg-rose-700 cursor-pointer"
-                              title="Device locked for unpaid amount. Click to manage."
-                            >
-                              <Lock className="w-2.5 h-2.5" />
-                              <span>LOCKED</span>
-                            </button>
-                          )}
-                        </div>
+                        <span className="font-medium text-zinc-800">{o.model}</span>
                         <span className="text-[10px] text-zinc-400 font-mono block">IMEI: {o.imei}</span>
                       </td>
                       <td className="py-3 px-5 text-zinc-500 max-w-[180px] truncate">{o.problem}</td>

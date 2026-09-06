@@ -26,14 +26,6 @@ export interface RepairOrder {
   date: string;
   technician?: string;
   createdBy?: string;
-  // Mobile Lock / Unlock via IMEI for unpaid amounts
-  isDeviceLocked?: boolean;
-  lockedReason?: string;
-  lockReason?: string;
-  lockedAt?: string;
-  unlockedAt?: string;
-  unlockCode?: string;
-  lockNotes?: string;
 }
 
 export type PartCategory =
@@ -107,4 +99,4 @@ export interface AccountTransaction {
   createdAt?: string;
 }
 
-export type TabType = 'dashboard' | 'new-order' | 'orders' | 'inventory' | 'accounts' | 'customers' | 'profile';
+export type TabType = 'dashboard' | 'new-order' | 'orders' | 'dues' | 'inventory' | 'accounts' | 'customers' | 'profile';

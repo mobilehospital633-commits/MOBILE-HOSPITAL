@@ -11,7 +11,6 @@ import {
   CreditCard,
   ShieldCheck,
   Check,
-  Lock,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
 import { generateQrCodeDataUrl, getBillingQrPayload } from '../utils/qr';
@@ -270,25 +269,6 @@ Thank you for choosing ${profile.shopName}!`;
                     {curr}{balance.toFixed(2)}
                   </span>
                 </div>
-
-                {/* Device Payment Lock Status Banner */}
-                {order.isDeviceLocked && (
-                  <div className="mt-2 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-[10px] space-y-0.5">
-                    <div className="font-extrabold flex items-center gap-1 text-rose-700">
-                      <Lock className="w-3 h-3 text-rose-600" />
-                      <span>DEVICE PAYMENT HOLD: LOCKED</span>
-                    </div>
-                    <p className="leading-tight text-rose-800">
-                      Device (IMEI: {order.imei}) is locked for unpaid repair balance. Release code will be provided upon clearance.
-                    </p>
-                  </div>
-                )}
-                {!order.isDeviceLocked && order.unlockCode && (
-                  <div className="mt-2 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] flex items-center gap-1 font-bold">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>DEVICE UNLOCKED • Release PIN: {order.unlockCode}</span>
-                  </div>
-                )}
               </div>
 
               {/* CUSTOMER BILLING QR SECTION */}
@@ -438,31 +418,6 @@ Thank you for choosing ${profile.shopName}!`;
                   <span className="text-rose-700">Net Balance Due</span>
                   <span className="text-rose-700">{curr}{balance.toFixed(2)}</span>
                 </div>
-
-                {/* Device Lock Warning on Tax Invoice */}
-                {order.isDeviceLocked && (
-                  <div className="mt-2.5 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 text-xs flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-rose-600 shrink-0" />
-                      <div>
-                        <span className="font-bold text-rose-800 uppercase tracking-wide text-[11px] block">
-                          Security Notice: Device Locked (IMEI: {order.imei})
-                        </span>
-                        <span className="text-[10px] text-rose-700">
-                          Hardware/Software hold active until repair balance is cleared. Release PIN provided upon payment.
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {!order.isDeviceLocked && order.unlockCode && (
-                  <div className="mt-2.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-xs font-semibold">
-                      Device Unlocked & Cleared • Release Code: <strong className="font-mono">{order.unlockCode}</strong>
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* CUSTOMER BILLING QR CARD */}

@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   PlusCircle,
   ListCheck,
+  CreditCard,
   Boxes,
   Users,
   Sliders,
@@ -16,17 +17,20 @@ interface SidebarProps {
   currentTab: TabType;
   onTabChange: (tab: TabType) => void;
   profile: ShopProfile;
+  duesCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onTabChange,
   profile,
+  duesCount = 0,
 }) => {
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'new-order' as TabType, label: 'New Order', icon: PlusCircle },
     { id: 'orders' as TabType, label: 'Manage Repairs', icon: ListCheck },
+    { id: 'dues' as TabType, label: 'Due Payments', icon: CreditCard, badge: duesCount },
     { id: 'inventory' as TabType, label: 'Inventory', icon: Boxes },
     { id: 'accounts' as TabType, label: 'Income & Expense', icon: Wallet },
     { id: 'customers' as TabType, label: 'Customers', icon: Users },
@@ -72,6 +76,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
               <span className="truncate flex-1 text-left">{item.label}</span>
+              {Boolean(item.badge && item.badge > 0) && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white tracking-tight leading-none">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}
