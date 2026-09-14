@@ -19,6 +19,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { AccountTransaction, RepairOrder, ShopProfile, TabType } from '../types';
+import { getOrderDeviceName, getOrderModelNumber } from '../utils/orderUtils';
 
 interface DashboardTabProps {
   orders: RepairOrder[];
@@ -83,16 +84,16 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner highlighting Customer Billing QR */}
+      {/* Workshop Operations Banner */}
       <div className="bg-zinc-900 rounded-xl p-5 sm:p-6 text-white border border-zinc-800 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-[11px] font-medium text-zinc-300">
-            <QrCode className="w-3.5 h-3.5 text-zinc-300" />
-            <span>Customer Billing QR Enabled</span>
+            <Smartphone className="w-3.5 h-3.5 text-zinc-300" />
+            <span>Service Station & Counter</span>
           </div>
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Customer Receipts with Dynamic Billing QR</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Workshop & Device Repair Hub</h2>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            Every customer receipt automatically features a billing QR code pre-filled with the remaining balance. Customers can scan directly to pay via UPI or banking apps.
+            Intake incoming devices, monitor repair workflows, track spare parts inventory, and print official workshop receipts.
           </p>
         </div>
 
@@ -116,7 +117,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             onClick={() => onNavigate('profile')}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border border-zinc-700 active:scale-98 cursor-pointer"
           >
-            QR & Settings
+            Settings
           </button>
         </div>
       </div>
@@ -326,7 +327,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         <div className="px-5 py-3.5 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/50">
           <div>
             <h2 className="text-sm font-semibold text-zinc-900">Recent Repair Orders</h2>
-            <p className="text-xs text-zinc-500">Preview receipts with customer billing QR codes</p>
+            <p className="text-xs text-zinc-500">Preview and print official customer receipts</p>
           </div>
           <button
             onClick={() => onNavigate('orders')}
@@ -371,8 +372,15 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                         <span className="block text-[11px] text-zinc-400">{o.phone}</span>
                       </td>
                       <td className="py-3 px-5 text-zinc-700">
-                        <span className="font-medium text-zinc-800">{o.model}</span>
-                        <span className="text-[10px] text-zinc-400 font-mono block">IMEI: {o.imei}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-zinc-800">{getOrderDeviceName(o)}</span>
+                          {getOrderModelNumber(o) && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              {getOrderModelNumber(o)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-zinc-400 font-mono block mt-0.5">IMEI: {o.imei || 'N/A'}</span>
                       </td>
                       <td className="py-3 px-5 text-zinc-500 max-w-[180px] truncate">{o.problem}</td>
                       <td className="py-3 px-5">

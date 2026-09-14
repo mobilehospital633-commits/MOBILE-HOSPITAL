@@ -17,7 +17,9 @@ export interface RepairOrder {
   id: string;
   name: string;
   phone: string;
-  model: string;
+  deviceName?: string; // Device Name (e.g. iPhone 14 Pro, Samsung Galaxy S23)
+  modelNumber?: string; // Device Model Number (e.g. A2890, SM-S911B, CPH2487)
+  model: string; // Combined / legacy model string for backward compatibility
   imei: string;
   problem: string;
   cost: number;
@@ -68,10 +70,10 @@ export interface ShopProfile {
   taxLabel: string;
   taxRate: number;
   currency: string;
-  upi: string;
+  upi?: string;
   upiPayeeName?: string;
-  includeBillingQr: boolean;
-  qrType: 'upi' | 'invoice_data' | 'custom_url';
+  includeBillingQr?: boolean;
+  qrType?: 'upi' | 'invoice_data' | 'custom_url';
   customQrUrl?: string;
   showTaxOnReceipt: boolean;
   terms: string;
@@ -80,13 +82,41 @@ export interface ShopProfile {
   hideTotalBilled?: boolean;
   theme?: ThemeMode;
   themeAccent?: ThemeAccent;
+  customAccentColor?: string;
+  accentGlow?: boolean;
   securityPin?: string;
   pinAuthEnabled?: boolean;
   pinHint?: string;
 }
 
-export type ThemeMode = 'light' | 'dark' | 'midnight' | 'sepia' | 'forest' | 'cyber' | 'system';
-export type ThemeAccent = 'slate' | 'emerald' | 'cobalt' | 'amber' | 'rose' | 'violet' | 'cyan' | 'orange';
+export type ThemeMode =
+  | 'light'
+  | 'dark'
+  | 'midnight'
+  | 'sepia'
+  | 'forest'
+  | 'cyber'
+  | 'glacier'
+  | 'amethyst'
+  | 'sunset'
+  | 'oled'
+  | 'solar'
+  | 'system';
+
+export type ThemeAccent =
+  | 'slate'
+  | 'emerald'
+  | 'cobalt'
+  | 'amber'
+  | 'rose'
+  | 'violet'
+  | 'cyan'
+  | 'orange'
+  | 'teal'
+  | 'fuchsia'
+  | 'indigo'
+  | 'lime'
+  | 'custom';
 
 export type TransactionType = 'income' | 'expense';
 

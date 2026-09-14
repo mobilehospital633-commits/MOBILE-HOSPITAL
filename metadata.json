@@ -1,6 +1,6 @@
 {
   "name": "Mobile Repair & Billing Manager",
-  "description": "Professional mobile workshop management system with customer receipts, billing QR codes, accounts ledger, inventory tracking, and multi-theme customization.",
+  "description": "Professional mobile workshop management system with customer receipts, billing QR codes, accounts ledger, inventory tracking, and Google Drive cloud backup.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

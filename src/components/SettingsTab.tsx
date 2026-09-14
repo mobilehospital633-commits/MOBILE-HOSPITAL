@@ -5,7 +5,6 @@ import {
   Upload,
   Save,
   Trash2,
-  QrCode,
   Store,
   Receipt,
   RotateCcw,
@@ -20,9 +19,9 @@ import {
   Cloud,
   KeyRound,
   AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { ShopProfile, ThemeMode, ThemeAccent, RepairOrder, InventoryItem, AccountTransaction } from '../types';
-import { generateQrCodeDataUrl } from '../utils/qr';
 import { MHLogo } from './MHLogo';
 import { ThemeSelector } from './ThemeSelector';
 import { GoogleDriveBackupView } from './GoogleDriveBackupView';
@@ -63,7 +62,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 }) => {
   const [subtab, setSubtab] = useState<'general' | 'tax' | 'system' | 'security' | 'drive'>(initialSubtab);
   const [formData, setFormData] = useState<ShopProfile>(profile);
-  const [previewQrUrl, setPreviewQrUrl] = useState<string>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [pinChangeSuccess, setPinChangeSuccess] = useState('');
   const [pinChangeError, setPinChangeError] = useState('');
@@ -80,17 +78,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   useEffect(() => {
     setFormData(profile);
   }, [profile]);
-
-  // Update sample QR preview
-  useEffect(() => {
-    const upiId = formData.upi || 'shop@upi';
-    const sampleUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-      formData.upiPayeeName || formData.shopName || 'Shop'
-    )}&am=1500.00&cu=INR&tn=Sample%20Repair%20Bill`;
-    generateQrCodeDataUrl(sampleUri, { width: 140, margin: 1 }).then((url) => {
-      setPreviewQrUrl(url);
-    });
-  }, [formData.upi, formData.upiPayeeName, formData.shopName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +140,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Receipt Design, Customer Billing QR & Shop Profile
+                Receipt Design, Tax Rates & Shop Profile
               </p>
             </div>
           </div>
@@ -210,8 +197,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 : 'border-transparent text-zinc-400 hover:text-zinc-600'
             }`}
           >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>Billing QR & Receipts</span>
+            <Receipt className="w-3.5 h-3.5" />
+            <span>Tax & Receipts</span>
           </button>
           <button
             type="button"
@@ -380,93 +367,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
           )}
 
-          {/* SUBTAB 2: Tax & Billing QR */}
+          {/* SUBTAB 2: Tax & Invoicing */}
           {subtab === 'tax' && (
             <div className="space-y-5">
-              
-              {/* Highlight Card for Customer Billing QR Feature */}
-              <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-5">
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-zinc-900 flex items-center justify-center text-white">
-                      <QrCode className="w-3.5 h-3.5" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-zinc-900">Customer Billing QR Code Integration</h4>
-                  </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    Automatically embed a customer payment QR code onto all printed, PDF, and digital receipts. Customers can scan directly with Google Pay, PhonePe, Paytm, or any UPI app to pay the exact balance due.
-                  </p>
-                  <div className="flex items-center gap-3 pt-1.5">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.includeBillingQr}
-                        onChange={(e) =>
-                          setFormData({ ...formData, includeBillingQr: e.target.checked })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-10 h-5 bg-zinc-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-zinc-900"></div>
-                    </label>
-                    <span className="text-xs font-medium text-zinc-800">
-                      {formData.includeBillingQr ? 'Enabled on Customer Receipts' : 'Disabled'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Sample Live QR Preview Box */}
-                <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-2xs text-center shrink-0 flex flex-col items-center">
-                  <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                    Live QR Preview
-                  </span>
-                  {previewQrUrl ? (
-                    <img
-                      src={previewQrUrl}
-                      alt="Sample Billing QR"
-                      className="w-24 h-24 object-contain"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-zinc-100 animate-pulse rounded" />
-                  )}
-                  <span className="text-[10px] font-mono text-zinc-600 mt-1 max-w-[120px] truncate">
-                    {formData.upi || 'shop@upi'}
-                  </span>
-                </div>
-              </div>
-
-              {/* UPI & Payment Config */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                    UPI ID / VPA (For Customer Billing QR) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.upi}
-                    onChange={(e) => setFormData({ ...formData, upi: e.target.value })}
-                    placeholder="e.g. mobilehospital@upi or 9876543210@paytm"
-                    className="w-full border border-zinc-200 rounded-lg p-2 text-sm font-mono text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                  />
-                  <span className="text-[11px] text-zinc-400 mt-1 block">
-                    Used to generate direct-pay QR codes with exact order balance.
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                    UPI Payee Name (Shown in Customer Banking Apps)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.upiPayeeName || ''}
-                    onChange={(e) => setFormData({ ...formData, upiPayeeName: e.target.value })}
-                    placeholder="e.g. Mobile Hospital Repairs"
-                    className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
               {/* Tax Information */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
@@ -579,12 +482,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 leading-relaxed">
-                  Choose from 6 curated workshop display themes (Daylight White, OLED Charcoal, Midnight Navy, Warm Sand, Nordic Forest, Cyber Carbon, plus System Auto), along with 8 vivid accent highlights. Changes take effect immediately across all screens and are saved to your profile.
+                  Choose from 12 curated workshop display themes (including Dynamic Solar 24-Hour Adaptive, Arctic Glacier, Deep Nebula Amethyst, Amber Sunset, and True Black 100% OLED), along with 12+ vibrant accent highlights, custom hex color picking, and ambient glow lighting.
                 </p>
                 <div className="pt-2">
                   <ThemeSelector
                     theme={formData.theme || 'light'}
                     accent={formData.themeAccent || 'slate'}
+                    customAccentColor={formData.customAccentColor || '#2563eb'}
+                    accentGlow={formData.accentGlow !== false}
                     onChangeTheme={(newTheme) => {
                       const updated = { ...formData, theme: newTheme };
                       setFormData(updated);
@@ -592,6 +497,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     }}
                     onChangeAccent={(newAccent) => {
                       const updated = { ...formData, themeAccent: newAccent };
+                      setFormData(updated);
+                      onSaveProfile(updated);
+                    }}
+                    onChangeCustomAccent={(hex) => {
+                      const updated = { ...formData, customAccentColor: hex, themeAccent: 'custom' as const };
+                      setFormData(updated);
+                      onSaveProfile(updated);
+                    }}
+                    onToggleAccentGlow={(glow) => {
+                      const updated = { ...formData, accentGlow: glow };
                       setFormData(updated);
                       onSaveProfile(updated);
                     }}

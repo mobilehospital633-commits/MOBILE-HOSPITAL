@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCw, Plus, QrCode, Eye, EyeOff, Cloud, Lock, KeyRound } from 'lucide-react';
+import { RotateCw, Plus, QrCode, Eye, EyeOff, Cloud, Lock, KeyRound, Monitor } from 'lucide-react';
 import { RepairOrder, InventoryItem, ShopProfile, TabType, AccountTransaction, ThemeMode, ThemeAccent } from './types';
 import { INITIAL_ORDERS, INITIAL_INVENTORY, INITIAL_PROFILE, INITIAL_TRANSACTIONS } from './data';
 import { COMPREHENSIVE_PARTS_CATALOG } from './partsCatalog';
@@ -18,7 +18,11 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { PinLoginPage } from './components/PinLoginPage';
 import { PinSetupModal } from './components/PinSetupModal';
 import { DuePaymentsTab } from './components/DuePaymentsTab';
+import { DesktopAppModal } from './components/DesktopAppModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { BackupPayload } from './lib/googleDrive';
+import { formatDeviceDisplay } from './utils/orderUtils';
+import { applyThemeModeAndAccent } from './utils/themeUtils';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
@@ -83,6 +87,7 @@ export default function App() {
   });
 
   const [isPinSetupModalOpen, setIsPinSetupModalOpen] = useState(false);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
 
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
@@ -121,43 +126,30 @@ export default function App() {
     }
   }, [profile]);
 
-  // Apply theme mode and accent highlight to HTML document
+  // Apply dynamic theme mode and accent highlight to HTML document
   useEffect(() => {
-    const themeMode = profile.theme || 'light';
-    const accent = profile.themeAccent || 'slate';
-    const root = document.documentElement;
+    applyThemeModeAndAccent(profile);
 
-    const applyThemeMode = (mode: string) => {
-      // Clear previous theme mode classes
-      root.classList.remove('dark', 'theme-midnight', 'theme-forest', 'theme-cyber', 'theme-sepia');
-
-      if (mode === 'dark') {
-        root.classList.add('dark');
-      } else if (mode === 'midnight') {
-        root.classList.add('dark', 'theme-midnight');
-      } else if (mode === 'forest') {
-        root.classList.add('dark', 'theme-forest');
-      } else if (mode === 'cyber') {
-        root.classList.add('dark', 'theme-cyber');
-      } else if (mode === 'sepia') {
-        root.classList.add('theme-sepia');
-      }
-      root.setAttribute('data-theme', mode);
-    };
-
-    if (themeMode === 'system') {
+    // If theme is 'solar', set interval to update dynamic solar phase every minute
+    let timer: NodeJS.Timeout | null = null;
+    if (profile.theme === 'solar') {
+      timer = setInterval(() => {
+        applyThemeModeAndAccent(profile);
+      }, 60000);
+    } else if (profile.theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyThemeMode(mediaQuery.matches ? 'dark' : 'light');
-
-      const listener = (e: MediaQueryListEvent) => applyThemeMode(e.matches ? 'dark' : 'light');
+      const listener = () => applyThemeModeAndAccent(profile);
       mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    } else {
-      applyThemeMode(themeMode);
+      return () => {
+        mediaQuery.removeEventListener('change', listener);
+        if (timer) clearInterval(timer);
+      };
     }
 
-    root.setAttribute('data-accent', accent);
-  }, [profile.theme, profile.themeAccent]);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [profile.theme, profile.themeAccent, profile.customAccentColor, profile.accentGlow]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -189,7 +181,7 @@ export default function App() {
         date: newOrder.date,
         paymentMethod: profile.includeBillingQr ? 'UPI' : 'Cash',
         referenceId: newOrder.id,
-        notes: `Advance deposit for repair job ${newOrder.id} (${newOrder.model} - ${newOrder.name})`,
+        notes: `Advance deposit for repair job ${newOrder.id} (${formatDeviceDisplay(newOrder)} - ${newOrder.name})`,
         createdAt: new Date().toISOString(),
       };
       setTransactions((prev) => [depositTxn, ...prev]);
@@ -219,7 +211,7 @@ export default function App() {
           date: new Date().toISOString().split('T')[0],
           paymentMethod: profile.includeBillingQr ? 'UPI' : 'Cash',
           referenceId: targetOrder.id,
-          notes: `Settled balance payment for repair job ${targetOrder.id} (${targetOrder.model} - ${targetOrder.name})`,
+          notes: `Settled balance payment for repair job ${targetOrder.id} (${formatDeviceDisplay(targetOrder)} - ${targetOrder.name})`,
           createdAt: new Date().toISOString(),
         };
         setTransactions((prev) => [settleTxn, ...prev]);
@@ -255,7 +247,7 @@ export default function App() {
       date: new Date().toISOString().split('T')[0],
       paymentMethod,
       referenceId: targetOrder.id,
-      notes: notes || `Payment collected for repair job ${targetOrder.id} (${targetOrder.model} - ${targetOrder.name})`,
+      notes: notes || `Payment collected for repair job ${targetOrder.id} (${formatDeviceDisplay(targetOrder)} - ${targetOrder.name})`,
       createdAt: new Date().toISOString(),
     };
     setTransactions((prev) => [settleTxn, ...prev]);
@@ -358,6 +350,14 @@ export default function App() {
     setProfile((prev) => ({ ...prev, themeAccent }));
   };
 
+  const handleChangeCustomAccent = (customAccentColor: string) => {
+    setProfile((prev) => ({ ...prev, customAccentColor, themeAccent: 'custom' }));
+  };
+
+  const handleToggleAccentGlow = (accentGlow: boolean) => {
+    setProfile((prev) => ({ ...prev, accentGlow }));
+  };
+
   const handleRestoreAllData = (payload: BackupPayload) => {
     if (payload.orders && Array.isArray(payload.orders)) {
       setOrders(payload.orders);
@@ -373,10 +373,37 @@ export default function App() {
     }
   };
 
+  const handleExportBackup = () => {
+    const backup: BackupPayload = {
+      app: 'Mobile Hospital POS & Workshop Management',
+      version: '4.2',
+      exportedAt: new Date().toISOString(),
+      shopName: profile.shopName || 'Mobile Hospital',
+      orders,
+      inventory,
+      transactions,
+      profile,
+      users: [],
+      stats: {
+        totalOrders: orders.length,
+        totalInventoryItems: inventory.length,
+        totalTransactions: transactions.length,
+        totalUsers: 1,
+      },
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `MobileHospital-OfflineBackup-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   const pageTitles: Record<TabType, string> = {
     dashboard: 'Dashboard Overview',
-    'new-order': 'New Repair Order Entry',
-    orders: 'Manage Repair Jobs',
+    'new-order': 'New Order Entry',
+    orders: 'Customer Repair Orders',
     dues: 'Customer Due Payments',
     inventory: 'Parts Inventory',
     accounts: 'Income & Expense Accounts',
@@ -396,6 +423,11 @@ export default function App() {
           profile={profile}
           onUnlock={() => setIsLocked(false)}
           onOpenPinSetup={() => setIsPinSetupModalOpen(true)}
+          onChangeTheme={handleChangeTheme}
+          onChangeAccent={handleChangeAccent}
+          onChangeCustomAccent={handleChangeCustomAccent}
+          onToggleAccentGlow={handleToggleAccentGlow}
+          onSaveProfile={setProfile}
         />
         <PinSetupModal
           isOpen={isPinSetupModalOpen}
@@ -416,6 +448,7 @@ export default function App() {
         onTabChange={setCurrentTab}
         profile={profile}
         duesCount={dueOrdersCount}
+        onOpenDesktopModal={() => setIsDesktopModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -447,9 +480,22 @@ export default function App() {
               compact
               theme={profile.theme || 'light'}
               accent={profile.themeAccent || 'slate'}
+              customAccentColor={profile.customAccentColor || '#2563eb'}
+              accentGlow={profile.accentGlow !== false}
               onChangeTheme={handleChangeTheme}
               onChangeAccent={handleChangeAccent}
+              onChangeCustomAccent={handleChangeCustomAccent}
+              onToggleAccentGlow={handleToggleAccentGlow}
             />
+
+            <button
+              onClick={() => setIsDesktopModalOpen(true)}
+              title="Desktop App (Windows .EXE & Offline Support)"
+              className="bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900 px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors border border-zinc-200 hover:border-zinc-300 active:scale-98 cursor-pointer shadow-2xs"
+            >
+              <Monitor className="w-3.5 h-3.5 text-zinc-700" />
+              <span className="hidden lg:inline">Desktop App</span>
+            </button>
 
             <button
               onClick={handleToggleHideTotalBilled}
@@ -550,6 +596,7 @@ export default function App() {
           {currentTab === 'new-order' && (
             <NewOrderTab
               profile={profile}
+              inventory={inventory}
               onOrderCreated={handleOrderCreated}
             />
           )}
@@ -629,7 +676,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* Printable Receipt Modal with Billing QR */}
+      {/* Printable Receipt Modal with Billing QR (Repair Jobs) */}
       <ReceiptModal
         order={activeReceiptOrder}
         profile={profile}
@@ -654,6 +701,16 @@ export default function App() {
         onSaveProfile={setProfile}
         onPinSaved={() => setIsLocked(false)}
       />
+
+      {/* Desktop App (Offline & Online) Modal */}
+      <DesktopAppModal
+        isOpen={isDesktopModalOpen}
+        onClose={() => setIsDesktopModalOpen(false)}
+        onExportBackup={handleExportBackup}
+      />
+
+      {/* Real-time Offline/Online Floating Alert */}
+      <OfflineIndicator />
     </div>
   );
 }

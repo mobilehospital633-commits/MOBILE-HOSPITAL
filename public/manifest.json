@@ -1,0 +1,17 @@
+{
+  "name": "Mobile Repair & Billing Manager",
+  "short_name": "Mobile Hospital",
+  "description": "Professional mobile workshop management system with customer receipts, billing QR codes, accounts ledger, and inventory tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#18181b",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

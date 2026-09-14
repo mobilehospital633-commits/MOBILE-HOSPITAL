@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
+import { getOrderDeviceName, getOrderModelNumber } from '../utils/orderUtils';
 import { generateQrCodeDataUrl, getBillingQrPayload } from '../utils/qr';
 
 interface DuePaymentsTabProps {
@@ -97,12 +98,16 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
     return dueOrders
       .filter((o) => {
         const q = searchTerm.toLowerCase().trim();
+        const devName = (o.deviceName || '').toLowerCase();
+        const modelNum = (o.modelNumber || '').toLowerCase();
         const matchesSearch =
           !q ||
           o.id.toLowerCase().includes(q) ||
           o.name.toLowerCase().includes(q) ||
           o.phone.toLowerCase().includes(q) ||
           o.model.toLowerCase().includes(q) ||
+          devName.includes(q) ||
+          modelNum.includes(q) ||
           o.imei.toLowerCase().includes(q);
 
         let matchesStatus = true;
@@ -164,7 +169,11 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
     const upiInfo = profile.upi ? `\n💳 Pay via UPI: ${profile.upi}` : '';
     const phoneClean = order.phone.replace(/[^0-9]/g, '');
 
-    const message = `Hello ${order.name} Ji,\n\nThis is a polite reminder from *${shopName}* regarding your device repair:\n\n📱 *Device:* ${order.model}\n🔖 *Ticket ID:* ${order.id}\n💰 *Total Bill:* ${curr}${order.cost.toFixed(2)}\n✅ *Advance Paid:* ${curr}${order.deposit.toFixed(2)}\n⚠️ *Pending Balance Due:* ${curr}${balance.toFixed(2)}${upiInfo}\n\nPlease settle this balance at your earliest convenience. Thank you for choosing ${shopName}!`;
+    const devName = getOrderDeviceName(order);
+    const modelNo = getOrderModelNumber(order);
+    const deviceDisplay = modelNo ? `${devName} (Model: ${modelNo})` : devName;
+
+    const message = `Hello ${order.name} Ji,\n\nThis is a polite reminder from *${shopName}* regarding your device repair:\n\n📱 *Device:* ${deviceDisplay}\n🔖 *Ticket ID:* ${order.id}\n💰 *Total Bill:* ${curr}${order.cost.toFixed(2)}\n✅ *Advance Paid:* ${curr}${order.deposit.toFixed(2)}\n⚠️ *Pending Balance Due:* ${curr}${balance.toFixed(2)}${upiInfo}\n\nPlease settle this balance at your earliest convenience. Thank you for choosing ${shopName}!`;
 
     const encoded = encodeURIComponent(message);
     const waUrl = `https://wa.me/${phoneClean}?text=${encoded}`;
@@ -439,7 +448,14 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
 
                       {/* Device & Ticket */}
                       <td className="py-3.5 px-5">
-                        <div className="font-semibold text-zinc-800">{order.model}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-zinc-800">{getOrderDeviceName(order)}</span>
+                          {getOrderModelNumber(order) && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              {getOrderModelNumber(order)}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-zinc-400">
                           <span className="font-mono font-medium text-zinc-600">{order.id}</span>
                           <span>•</span>
@@ -593,7 +609,14 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
               {/* Order Info Card */}
               <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 flex justify-between items-center text-xs">
                 <div>
-                  <div className="font-bold text-zinc-900">{collectingOrder.model}</div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-bold text-zinc-900">{getOrderDeviceName(collectingOrder)}</span>
+                    {getOrderModelNumber(collectingOrder) && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-200 text-zinc-700">
+                        {getOrderModelNumber(collectingOrder)}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-zinc-500 mt-0.5">Phone: {collectingOrder.phone}</div>
                 </div>
                 <div className="text-right">
@@ -727,7 +750,8 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
             <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
               <p className="text-xs font-bold text-zinc-800">{qrModalOrder.name}</p>
               <p className="text-[11px] text-zinc-500">
-                Ticket #{qrModalOrder.id} • {qrModalOrder.model}
+                Ticket #{qrModalOrder.id} • {getOrderDeviceName(qrModalOrder)}
+                {getOrderModelNumber(qrModalOrder) ? ` (${getOrderModelNumber(qrModalOrder)})` : ''}
               </p>
               <div className="text-lg font-black text-rose-600 mt-1">
                 Due: {curr}{Math.max(0, qrModalOrder.cost - qrModalOrder.deposit).toFixed(2)}

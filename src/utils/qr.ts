@@ -1,15 +1,17 @@
 import QRCode from 'qrcode';
 import { RepairOrder, ShopProfile } from '../types';
+import { formatDeviceDisplay } from './orderUtils';
 
 export function getBillingQrPayload(order: RepairOrder, profile: ShopProfile): { text: string; label: string } {
   const balance = Math.max(0, order.cost - order.deposit);
   const upiId = (profile.upi || '').trim();
   const shopName = (profile.upiPayeeName || profile.shopName || 'Mobile Hospital').trim();
+  const deviceName = formatDeviceDisplay(order);
 
   if (profile.qrType === 'upi' && upiId) {
     // Standard UPI string
     const amParam = balance > 0 ? `&am=${balance.toFixed(2)}` : '';
-    const note = encodeURIComponent(`Bill for ${order.id} - ${order.model}`);
+    const note = encodeURIComponent(`Bill for ${order.id} - ${deviceName}`);
     const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}${amParam}&cu=INR&tn=${note}`;
     return {
       text: upiUri,
@@ -26,7 +28,7 @@ export function getBillingQrPayload(order: RepairOrder, profile: ShopProfile): {
   }
 
   // Digital Invoice data string
-  const invoiceData = `VERIFIED BILL\nTicket: ${order.id}\nCustomer: ${order.name}\nDevice: ${order.model}\nDate: ${order.date}\nTotal: ${profile.currency || '₹'}${order.cost.toFixed(2)}\nDeposit: ${profile.currency || '₹'}${order.deposit.toFixed(2)}\nDue: ${profile.currency || '₹'}${balance.toFixed(2)}\nShop: ${profile.shopName}`;
+  const invoiceData = `VERIFIED BILL\nTicket: ${order.id}\nCustomer: ${order.name}\nDevice: ${deviceName}\nDate: ${order.date}\nTotal: ${profile.currency || '₹'}${order.cost.toFixed(2)}\nDeposit: ${profile.currency || '₹'}${order.deposit.toFixed(2)}\nDue: ${profile.currency || '₹'}${balance.toFixed(2)}\nShop: ${profile.shopName}`;
   return {
     text: invoiceData,
     label: `Bill Ref: ${order.id}`,

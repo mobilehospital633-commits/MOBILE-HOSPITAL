@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Printer,
@@ -6,15 +6,15 @@ import {
   CheckCircle2,
   Download,
   Copy,
-  QrCode,
+  Receipt,
   Smartphone,
   CreditCard,
   ShieldCheck,
   Check,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
-import { generateQrCodeDataUrl, getBillingQrPayload } from '../utils/qr';
 import { MHLogo } from './MHLogo';
+import { getOrderDeviceName, getOrderModelNumber } from '../utils/orderUtils';
 
 interface ReceiptModalProps {
   order: RepairOrder | null;
@@ -32,7 +32,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClearBalance,
 }) => {
   const [receiptStyle, setReceiptStyle] = useState<'thermal' | 'invoice'>('thermal');
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
 
   const balance = order ? Math.max(0, order.cost - order.deposit) : 0;
@@ -44,26 +43,21 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const subtotal = order ? (hasTax ? order.cost / (1 + taxRate / 100) : order.cost) : 0;
   const taxAmount = order ? (hasTax ? order.cost - subtotal : 0) : 0;
 
-  useEffect(() => {
-    if (!order) return;
-    const { text } = getBillingQrPayload(order, profile);
-    generateQrCodeDataUrl(text, { width: 220, margin: 1 }).then((url) => {
-      setQrDataUrl(url);
-    });
-  }, [order, profile]);
-
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
+  const devName = order ? getOrderDeviceName(order) : '';
+  const modelNo = order ? getOrderModelNumber(order) : '';
+
   const handleCopyTextBill = () => {
     const text = `*${profile.shopName} - Repair Bill*
 Ticket ID: ${order.id}
 Date: ${order.date}
 Customer: ${order.name} (${order.phone})
-Device: ${order.model}
+Device: ${devName}${modelNo ? ` (Model: ${modelNo})` : ''}
 IMEI/SN: ${order.imei || 'N/A'}
 Reported Issue: ${order.problem}
 Status: ${order.status}
@@ -71,7 +65,6 @@ Status: ${order.status}
 Total Cost: ${curr}${order.cost.toFixed(2)}
 Deposit Paid: ${curr}${order.deposit.toFixed(2)}
 Balance Due: ${curr}${balance.toFixed(2)}
-${profile.upi ? `Pay via UPI: ${profile.upi}` : ''}
 Thank you for visiting ${profile.shopName}!`;
 
     navigator.clipboard.writeText(text);
@@ -82,19 +75,19 @@ Thank you for visiting ${profile.shopName}!`;
   const handleSendWhatsApp = () => {
     const cleanPhone = order.phone.replace(/[^0-9]/g, '');
     const balanceText = balance > 0 ? `\n*Balance Due: ${curr}${balance.toFixed(2)}*` : `\n*Status: PAID IN FULL*`;
-    const upiNote = profile.upi && balance > 0 ? `\n💳 *Pay online via UPI:* ${profile.upi}` : '';
+    const deviceDisplay = modelNo ? `${devName} (Model: ${modelNo})` : devName;
 
     const text = `🏥 *${profile.shopName.toUpperCase()} REPAIR RECEIPT* 🏥
 ──────────────────────
 Ticket ID: *${order.id}*
 Date: ${order.date}
 Customer: ${order.name}
-Device: *${order.model}*
+Device: *${deviceDisplay}*
 Issue: ${order.problem}
 Status: *${order.status}*
 ──────────────────────
 Est. Total: ${curr}${order.cost.toFixed(2)}
-Deposit Paid: ${curr}${order.deposit.toFixed(2)}${balanceText}${upiNote}
+Deposit Paid: ${curr}${order.deposit.toFixed(2)}${balanceText}
 ──────────────────────
 Please present this ticket ID during pickup.
 Thank you for choosing ${profile.shopName}!`;
@@ -117,11 +110,11 @@ Thank you for choosing ${profile.shopName}!`;
         <div className="px-5 py-3.5 bg-white border-b border-zinc-200 text-zinc-900 flex justify-between items-center no-print">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-zinc-900 flex items-center justify-center text-white text-xs font-semibold shadow-2xs">
-              <QrCode className="w-3.5 h-3.5" />
+              <Receipt className="w-3.5 h-3.5" />
             </div>
             <div>
               <h3 className="font-semibold text-sm text-zinc-900 tracking-tight leading-tight">Customer Repair Receipt</h3>
-              <p className="text-[11px] text-zinc-500">Includes live customer billing QR code</p>
+              <p className="text-[11px] text-zinc-500">Official customer repair document</p>
             </div>
           </div>
 
@@ -226,9 +219,15 @@ Thank you for choosing ${profile.shopName}!`;
               {/* Device & Fault */}
               <div className="py-2.5 border-b border-dashed border-zinc-300 space-y-1 text-[11px]">
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Device:</span>
-                  <span className="font-bold text-zinc-900 text-right">{order.model}</span>
+                  <span className="text-zinc-400">Device Name:</span>
+                  <span className="font-bold text-zinc-900 text-right">{devName}</span>
                 </div>
+                {modelNo && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Model No:</span>
+                    <span className="font-bold text-zinc-800 text-right font-mono">{modelNo}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-zinc-400">IMEI/SN:</span>
                   <span className="text-zinc-700">{order.imei || 'N/A'}</span>
@@ -271,46 +270,11 @@ Thank you for choosing ${profile.shopName}!`;
                 </div>
               </div>
 
-              {/* CUSTOMER BILLING QR SECTION */}
-              {profile.includeBillingQr && (
-                <div className="my-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-center flex flex-col items-center">
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-zinc-600 uppercase mb-1.5">
-                    <QrCode className="w-3.5 h-3.5 text-zinc-900" />
-                    <span>Customer Billing QR Code</span>
-                  </div>
-
-                  {qrDataUrl ? (
-                    <div className="bg-white p-2 rounded-lg border border-zinc-200 shadow-2xs">
-                      <img
-                        src={qrDataUrl}
-                        alt="Customer Billing QR"
-                        className="w-32 h-32 object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-32 h-32 bg-zinc-200 animate-pulse rounded-lg" />
-                  )}
-
-                  {balance > 0 ? (
-                    <div className="mt-2 space-y-0.5">
-                      <p className="text-[11px] font-semibold text-zinc-900">
-                        Scan with any UPI / Banking App
-                      </p>
-                      <p className="text-[10px] text-zinc-500 font-sans">
-                        Pay balance: <strong className="text-rose-600 font-mono">{curr}{balance.toFixed(2)}</strong>
-                      </p>
-                      {profile.upi && (
-                        <p className="text-[9px] text-zinc-700 font-mono truncate max-w-[240px]">
-                          UPI: {profile.upi}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex items-center justify-center gap-1 text-[11px] font-medium text-emerald-700">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>PAID IN FULL - Digital Verified</span>
-                    </div>
-                  )}
+              {/* Balance status indicator */}
+              {balance <= 0 && (
+                <div className="my-3 py-2 px-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-semibold text-emerald-800">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>PAID IN FULL</span>
                 </div>
               )}
 
@@ -379,8 +343,13 @@ Thank you for choosing ${profile.shopName}!`;
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider">Device Information</span>
-                  <p className="font-semibold text-zinc-900 text-xs mt-0.5">{order.model}</p>
-                  <p className="text-zinc-500 font-mono text-[10px]">IMEI: {order.imei || 'N/A'}</p>
+                  <p className="font-semibold text-zinc-900 text-xs mt-0.5">{devName}</p>
+                  {modelNo && (
+                    <p className="text-zinc-700 text-[11px] font-mono mt-0.5">
+                      Model No: <strong className="font-semibold text-zinc-900">{modelNo}</strong>
+                    </p>
+                  )}
+                  <p className="text-zinc-500 font-mono text-[10px] mt-0.5">IMEI: {order.imei || 'N/A'}</p>
                 </div>
               </div>
 
@@ -420,38 +389,11 @@ Thank you for choosing ${profile.shopName}!`;
                 </div>
               </div>
 
-              {/* CUSTOMER BILLING QR CARD */}
-              {profile.includeBillingQr && (
-                <div className="my-4 p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 text-zinc-900 font-semibold text-xs mb-1">
-                      <QrCode className="w-4 h-4 text-zinc-900" />
-                      <span>Instant Billing QR</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 leading-snug">
-                      Scan with any UPI app (GPay, PhonePe, Paytm) to instantly settle this bill.
-                    </p>
-                    <div className="mt-2 text-xs font-mono font-bold text-zinc-900">
-                      Amount: <span className="text-rose-600">{curr}{balance.toFixed(2)}</span>
-                    </div>
-                    {profile.upi && (
-                      <p className="text-[10px] font-mono text-zinc-700 truncate mt-0.5">
-                        UPI: {profile.upi}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="bg-white p-1.5 rounded-lg border border-zinc-200 shadow-2xs shrink-0">
-                    {qrDataUrl ? (
-                      <img
-                        src={qrDataUrl}
-                        alt="Customer Billing QR"
-                        className="w-24 h-24 object-contain"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 bg-zinc-200 animate-pulse rounded-lg" />
-                    )}
-                  </div>
+              {/* Balance status indicator */}
+              {balance <= 0 && (
+                <div className="my-4 py-2.5 px-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-800">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>PAID IN FULL</span>
                 </div>
               )}
 

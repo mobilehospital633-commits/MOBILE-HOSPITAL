@@ -25,6 +25,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { AccountTransaction, RepairOrder, ShopProfile, TransactionType } from '../types';
+import { formatDeviceDisplay } from '../utils/orderUtils';
 
 interface AccountsTabProps {
   transactions: AccountTransaction[];
@@ -173,7 +174,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       date: o.date || new Date().toISOString().split('T')[0],
       paymentMethod: profile.includeBillingQr ? 'UPI' : 'Cash',
       referenceId: o.id,
-      notes: `Repair payment for ${o.model} - ${o.name} (${o.problem})`,
+      notes: `Repair payment for ${formatDeviceDisplay(o)} - ${o.name} (${o.problem})`,
       createdAt: new Date().toISOString(),
     }));
 
@@ -982,7 +983,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                         setFormReferenceId(selectedOrder.id);
                         setFormAmount(selectedOrder.deposit.toString());
                         setFormCategory('Repair Service Payment');
-                        setFormNotes(`Payment for ${selectedOrder.model} - ${selectedOrder.name}`);
+                        setFormNotes(`Payment for ${formatDeviceDisplay(selectedOrder)} - ${selectedOrder.name}`);
                       }
                     }}
                     defaultValue=""
@@ -991,7 +992,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     <option value="">-- Choose Repair Ticket to Link --</option>
                     {orders.map((o) => (
                       <option key={o.id} value={o.id}>
-                        {o.id} - {o.name} ({o.model}) - {curr}{o.cost} (Paid: {curr}{o.deposit})
+                        {o.id} - {o.name} ({formatDeviceDisplay(o)}) - {curr}{o.cost} (Paid: {curr}{o.deposit})
                       </option>
                     ))}
                   </select>

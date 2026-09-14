@@ -10,6 +10,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
+import { getOrderDeviceName, getOrderModelNumber } from '../utils/orderUtils';
 
 interface OrdersTabProps {
   orders: RepairOrder[];
@@ -37,11 +38,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
   const filteredOrders = orders.filter((o) => {
     const q = searchTerm.toLowerCase();
+    const devName = (o.deviceName || '').toLowerCase();
+    const modelNum = (o.modelNumber || '').toLowerCase();
     const matchesSearch =
       o.id.toLowerCase().includes(q) ||
       o.name.toLowerCase().includes(q) ||
       o.phone.toLowerCase().includes(q) ||
       o.model.toLowerCase().includes(q) ||
+      devName.includes(q) ||
+      modelNum.includes(q) ||
       o.imei.toLowerCase().includes(q);
 
     let matchesStatus = true;
@@ -54,6 +59,28 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
   return (
     <div className="space-y-5">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0">
+            <Wrench className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold text-zinc-900 tracking-tight">
+                Customer Repair Orders
+              </h2>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
+                {orders.length} Active Jobs
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Device diagnostic, technician workbench repairs, IMEI tracking & status updates
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Search & Filter Bar */}
       <div className="bg-white p-3.5 rounded-xl border border-zinc-200 shadow-2xs flex flex-col md:flex-row gap-3 justify-between items-center">
         <div className="relative flex-1 w-full">
@@ -96,7 +123,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               <tr>
                 <th className="py-3 px-5">Job Ticket</th>
                 <th className="py-3 px-5">Customer</th>
-                <th className="py-3 px-5">Device & IMEI</th>
+                <th className="py-3 px-5">Device Name & Model No.</th>
                 <th className="py-3 px-5">Cost & Deposit</th>
                 <th className="py-3 px-5">Status</th>
                 <th className="py-3 px-5 text-center">Receipt & Actions</th>
@@ -112,6 +139,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               ) : (
                 filteredOrders.map((o) => {
                   const balance = Math.max(0, o.cost - o.deposit);
+                  const devName = getOrderDeviceName(o);
+                  const modelNo = getOrderModelNumber(o);
 
                   return (
                     <tr
@@ -132,20 +161,27 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         <span className="block text-xs text-zinc-400">{o.phone}</span>
                       </td>
 
-                      {/* Device & IMEI */}
+                      {/* Device & Model Number */}
                       <td className="py-3.5 px-5">
-                        <strong className="text-zinc-800 font-medium">{o.model}</strong>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                          <span className="text-xs text-zinc-500 font-mono font-medium">
-                            IMEI: {o.imei}
-                          </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <strong className="text-zinc-900 font-semibold">{devName}</strong>
+                          {modelNo && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200" title="Device Model Number">
+                              {modelNo}
+                            </span>
+                          )}
                         </div>
-                        {o.technician && (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium mt-0.5">
-                            <Wrench className="w-2.5 h-2.5 text-zinc-400" />
-                            <span>{o.technician}</span>
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                          <span className="text-xs text-zinc-500 font-mono font-medium">
+                            IMEI: {o.imei || 'N/A'}
                           </span>
-                        )}
+                          {o.technician && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                              <Wrench className="w-2.5 h-2.5 text-zinc-400" />
+                              <span>{o.technician}</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Financials */}

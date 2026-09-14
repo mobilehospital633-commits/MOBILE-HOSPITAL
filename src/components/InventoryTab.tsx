@@ -164,16 +164,119 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
   const [salePrice, setSalePrice] = useState<string>('');
   const [minStock, setMinStock] = useState<string>('2');
 
-  // Brands list dynamically from database + brand models registry
+  // Custom Added Options: Categories
+  const [customCategories, setCustomCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('mh_custom_inventory_categories');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showAddCustomCategory, setShowAddCustomCategory] = useState(false);
+  const [newCustomCategoryInput, setNewCustomCategoryInput] = useState('');
+
+  const handleAddCustomCategory = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCustomCategoryInput.trim();
+    if (!trimmed) return;
+    if (!customCategories.includes(trimmed) && !CATEGORIES.some((c) => c.name === trimmed)) {
+      const updated = [...customCategories, trimmed];
+      setCustomCategories(updated);
+      try {
+        localStorage.setItem('mh_custom_inventory_categories', JSON.stringify(updated));
+      } catch {}
+    }
+    setCategory(trimmed);
+    setNewCustomCategoryInput('');
+    setShowAddCustomCategory(false);
+  };
+
+  // Custom Added Options: Brands
+  const [customBrands, setCustomBrands] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('mh_custom_inventory_brands');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showAddCustomBrand, setShowAddCustomBrand] = useState(false);
+  const [newCustomBrandInput, setNewCustomBrandInput] = useState('');
+
+  const handleAddCustomBrand = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCustomBrandInput.trim();
+    if (!trimmed) return;
+    if (!customBrands.includes(trimmed) && !ALL_BRANDS.includes(trimmed)) {
+      const updated = [...customBrands, trimmed];
+      setCustomBrands(updated);
+      try {
+        localStorage.setItem('mh_custom_inventory_brands', JSON.stringify(updated));
+      } catch {}
+    }
+    setBrand(trimmed);
+    setNewCustomBrandInput('');
+    setShowAddCustomBrand(false);
+  };
+
+  // Custom Added Options: Part description suggestions per category
+  const [customPartSuggestions, setCustomPartSuggestions] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('mh_custom_part_suggestions');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [showAddCustomPartSuggestion, setShowAddCustomPartSuggestion] = useState(false);
+  const [newCustomPartSuggestionInput, setNewCustomPartSuggestionInput] = useState('');
+
+  const handleAddCustomPartSuggestion = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCustomPartSuggestionInput.trim();
+    if (!trimmed) return;
+    const currentList = customPartSuggestions[category] || [];
+    if (!currentList.includes(trimmed)) {
+      const updated = {
+        ...customPartSuggestions,
+        [category]: [...currentList, trimmed],
+      };
+      setCustomPartSuggestions(updated);
+      try {
+        localStorage.setItem('mh_custom_part_suggestions', JSON.stringify(updated));
+      } catch {}
+    }
+    setName(trimmed);
+    setNewCustomPartSuggestionInput('');
+    setShowAddCustomPartSuggestion(false);
+  };
+
+  const handleRemoveCustomPartSuggestion = (cat: string, sugToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentList = customPartSuggestions[cat] || [];
+    const updatedList = currentList.filter((s) => s !== sugToRemove);
+    const updated = {
+      ...customPartSuggestions,
+      [cat]: updatedList,
+    };
+    setCustomPartSuggestions(updated);
+    try {
+      localStorage.setItem('mh_custom_part_suggestions', JSON.stringify(updated));
+    } catch {}
+  };
+
+  // Brands list dynamically from database + brand models registry + custom brands
   const availableBrands = useMemo(() => {
     const brandsSet = new Set<string>(ALL_BRANDS);
+    customBrands.forEach((b) => brandsSet.add(b));
     inventory.forEach((item) => {
       if (item.brand && item.brand.trim()) {
         brandsSet.add(item.brand.trim());
       }
     });
     return Array.from(brandsSet).sort();
-  }, [inventory]);
+  }, [inventory, customBrands]);
 
   // Models list dynamically based on selectedBrand filter
   const filterAvailableModels = useMemo(() => {
@@ -604,31 +707,131 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
               {/* 1. Category */}
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  1. Component Category *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    1. Component Category *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomCategory(!showAddCustomCategory)}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                    <span>+ Custom Option</span>
+                  </button>
+                </div>
+
+                {showAddCustomCategory && (
+                  <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Custom category..."
+                        value={newCustomCategoryInput}
+                        onChange={(e) => setNewCustomCategoryInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomCategory();
+                          }
+                        }}
+                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomCategory}
+                        disabled={!newCustomCategoryInput.trim()}
+                        className="px-2 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === '__add_custom_category__') {
+                      setShowAddCustomCategory(true);
+                    } else {
+                      setCategory(e.target.value);
+                    }
+                  }}
                   className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors bg-white cursor-pointer"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.name} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
+                  <optgroup label="Standard Categories">
+                    {CATEGORIES.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {customCategories.length > 0 && (
+                    <optgroup label="Custom Categories">
+                      {customCategories.map((c) => (
+                        <option key={c} value={c}>
+                          ★ {c} (Custom)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="__add_custom_category__">➕ + Add Custom Category Option...</option>
                 </select>
               </div>
 
               {/* 2. Brand */}
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  2. Brand Name *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    2. Brand Name *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomBrand(!showAddCustomBrand)}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                    <span>+ Custom Option</span>
+                  </button>
+                </div>
+
+                {showAddCustomBrand && (
+                  <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Custom brand..."
+                        value={newCustomBrandInput}
+                        onChange={(e) => setNewCustomBrandInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomBrand();
+                          }
+                        }}
+                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomBrand}
+                        disabled={!newCustomBrandInput.trim()}
+                        className="px-2 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <select
                   value={brand}
                   onChange={(e) => {
                     const newBrand = e.target.value;
+                    if (newBrand === '__add_custom_brand__') {
+                      setShowAddCustomBrand(true);
+                      return;
+                    }
                     setBrand(newBrand);
                     const brandModels = getModelsForBrand(newBrand);
                     if (brandModels.length > 0 && !brandModels.includes(model)) {
@@ -639,9 +842,10 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                 >
                   {availableBrands.map((b) => (
                     <option key={b} value={b}>
-                      {b}
+                      {customBrands.includes(b) ? `★ ${b} (Custom)` : b}
                     </option>
                   ))}
+                  <option value="__add_custom_brand__">➕ + Add Custom Brand Option...</option>
                 </select>
               </div>
 
@@ -696,9 +900,60 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
 
               {/* 5. Parts Name */}
               <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  4. Parts Name / Component Description *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700">
+                    4. Parts Name / Component Description *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomPartSuggestion(!showAddCustomPartSuggestion)}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                    <span>+ Custom Option</span>
+                  </button>
+                </div>
+
+                {showAddCustomPartSuggestion && (
+                  <div className="mb-2 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-emerald-800">
+                        Add Custom Part Suggestion for "{category}"
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCustomPartSuggestion(false)}
+                        className="text-zinc-400 hover:text-zinc-600 p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="e.g. 100W GaN Super Charger, Hydrogel Privacy Film..."
+                        value={newCustomPartSuggestionInput}
+                        onChange={(e) => setNewCustomPartSuggestionInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomPartSuggestion();
+                          }
+                        }}
+                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomPartSuggestion}
+                        disabled={!newCustomPartSuggestionInput.trim()}
+                        className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer shrink-0"
+                      >
+                        Save Option
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <input
                   type="text"
                   required
@@ -708,11 +963,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
                 />
 
-                {/* Quick Suggestion Chips for Part Name */}
-                {CATEGORY_PART_SUGGESTIONS[category] && (
+                {/* Quick Suggestion Chips for Part Name (Standard + Custom) */}
+                {((CATEGORY_PART_SUGGESTIONS[category] && CATEGORY_PART_SUGGESTIONS[category].length > 0) ||
+                  (customPartSuggestions[category] && customPartSuggestions[category].length > 0)) && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="text-[10px] text-zinc-400 font-medium mr-1">Quick Suggestions:</span>
-                    {CATEGORY_PART_SUGGESTIONS[category].map((sug) => (
+                    
+                    {CATEGORY_PART_SUGGESTIONS[category]?.map((sug) => (
                       <button
                         key={sug}
                         type="button"
@@ -721,6 +978,29 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                       >
                         {sug}
                       </button>
+                    ))}
+
+                    {customPartSuggestions[category]?.map((cSug) => (
+                      <div
+                        key={cSug}
+                        className="inline-flex items-center text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setName(cSug)}
+                          className="px-2 py-0.5 hover:bg-emerald-100 rounded-l cursor-pointer"
+                        >
+                          ★ {cSug}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveCustomPartSuggestion(category, cSug, e)}
+                          className="pr-1.5 pl-0.5 hover:text-rose-600 cursor-pointer"
+                          title="Remove option"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -849,6 +1129,50 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
               </button>
             );
           })}
+
+          {/* Custom Added Categories Pills */}
+          {customCategories.map((cName) => {
+            const count = categoryCounts[cName] || 0;
+            const isSelected = selectedCategory === cName;
+
+            return (
+              <button
+                key={cName}
+                type="button"
+                onClick={() => setSelectedCategory(isSelected ? 'all' : cName)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer border ${
+                  isSelected
+                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                    : 'bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80'
+                }`}
+              >
+                <Tag className="w-3 h-3 text-emerald-600" />
+                <span>{cName}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                      isSelected ? 'bg-emerald-800 text-emerald-100' : 'bg-white text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsFormOpen(true);
+              setShowAddCustomCategory(true);
+            }}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-dashed border-emerald-300 flex items-center gap-1 cursor-pointer whitespace-nowrap transition-colors"
+            title="Add a new custom inventory category"
+          >
+            <Plus className="w-3 h-3" />
+            <span>+ Custom Category</span>
+          </button>
         </div>
       </div>
 

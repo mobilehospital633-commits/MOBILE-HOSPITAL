@@ -9,15 +9,21 @@ import {
   Sliders,
   Smartphone,
   Wallet,
+  Wrench,
+  Monitor,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { ShopProfile, TabType } from '../types';
 import { MHLogo } from './MHLogo';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface SidebarProps {
   currentTab: TabType;
   onTabChange: (tab: TabType) => void;
   profile: ShopProfile;
   duesCount?: number;
+  onOpenDesktopModal: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,11 +31,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   profile,
   duesCount = 0,
+  onOpenDesktopModal,
 }) => {
+  const isOnline = useOnlineStatus();
+
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'new-order' as TabType, label: 'New Order', icon: PlusCircle },
-    { id: 'orders' as TabType, label: 'Manage Repairs', icon: ListCheck },
+    { id: 'new-order' as TabType, label: 'New Order Entry', icon: PlusCircle },
+    { id: 'orders' as TabType, label: 'Repair Orders', icon: Wrench },
     { id: 'dues' as TabType, label: 'Due Payments', icon: CreditCard, badge: duesCount },
     { id: 'inventory' as TabType, label: 'Inventory', icon: Boxes },
     { id: 'accounts' as TabType, label: 'Income & Expense', icon: Wallet },
@@ -86,14 +95,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
+      {/* Desktop App & Offline Status */}
+      <div className="p-3 border-t border-zinc-800 bg-zinc-950/30 space-y-2">
+        <button
+          onClick={onOpenDesktopModal}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 hover:text-white text-xs font-medium transition-colors border border-zinc-700/60 cursor-pointer shadow-2xs group"
+        >
+          <div className="flex items-center gap-2 truncate">
+            <Monitor className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="truncate">Desktop App (.EXE)</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 font-mono bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-700/40">
+            PC
+          </span>
+        </button>
+
+        <div className="flex items-center justify-between px-1 text-[11px]">
+          <div className="flex items-center gap-1.5">
+            {isOnline ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-zinc-300 font-medium">Online Mode</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-amber-400 font-medium">Offline Active</span>
+              </>
+            )}
+          </div>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            Local DB
+          </span>
+        </div>
+      </div>
+
       {/* Footer Info */}
-      <div className="p-3.5 border-t border-zinc-800 bg-zinc-950/40 text-[11px] text-zinc-400 flex items-center justify-between">
+      <div className="p-3 border-t border-zinc-800 bg-zinc-950/60 text-[11px] text-zinc-400 flex items-center justify-between">
         <div className="flex items-center gap-1.5 truncate">
           <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
           <span className="truncate">{profile.shopName || 'Repair Hub'}</span>
         </div>
         <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono text-[10px] shrink-0 border border-zinc-700/60">
-          v4.2 QR
+          v4.2 POS
         </span>
       </div>
     </aside>
