@@ -35,13 +35,16 @@ export function getBillingQrPayload(order: RepairOrder, profile: ShopProfile): {
   };
 }
 
-export async function generateQrCodeDataUrl(text: string, options: { width?: number; margin?: number; darkColor?: string } = {}): Promise<string> {
+export async function generateQrCodeDataUrl(
+  text: string,
+  options: { width?: number; margin?: number; darkColor?: string } = {}
+): Promise<string> {
   try {
     const dataUrl = await QRCode.toDataURL(text, {
-      width: options.width || 220,
+      width: options.width || 360,
       margin: options.margin ?? 1,
       color: {
-        dark: options.darkColor || '#0f172a',
+        dark: options.darkColor || '#000000',
         light: '#ffffff',
       },
       errorCorrectionLevel: 'M',

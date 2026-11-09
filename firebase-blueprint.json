@@ -1,0 +1,453 @@
+{
+  "entities": {
+    "RepairOrder": {
+      "title": "RepairOrder",
+      "description": "Customer mobile repair order or counter sales order document",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the repair order"
+        },
+        "orderType": {
+          "type": "string",
+          "description": "Type of order: repair or sale",
+          "enum": ["repair", "sale"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer full name",
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "description": "Customer contact mobile phone number",
+          "maxLength": 25
+        },
+        "altPhone": {
+          "type": "string",
+          "description": "Alternative contact phone number",
+          "maxLength": 25
+        },
+        "deviceBrand": {
+          "type": "string",
+          "description": "Brand of the device",
+          "maxLength": 50
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Name or family of the device",
+          "maxLength": 100
+        },
+        "model": {
+          "type": "string",
+          "description": "Specific device model or product item name",
+          "maxLength": 100
+        },
+        "modelNumber": {
+          "type": "string",
+          "description": "Hardware model number",
+          "maxLength": 50
+        },
+        "deviceColor": {
+          "type": "string",
+          "description": "Color of the device chassis",
+          "maxLength": 40
+        },
+        "imei": {
+          "type": "string",
+          "description": "Device IMEI, serial number, or item barcode",
+          "maxLength": 40
+        },
+        "passcode": {
+          "type": "string",
+          "description": "Screen lock PIN or password",
+          "maxLength": 30
+        },
+        "problem": {
+          "type": "string",
+          "description": "Reported issue, fault symptoms, or product description",
+          "maxLength": 500
+        },
+        "cost": {
+          "type": "number",
+          "description": "Total agreed price or retail bill amount"
+        },
+        "deposit": {
+          "type": "number",
+          "description": "Advance deposit paid by customer"
+        },
+        "status": {
+          "type": "string",
+          "description": "Order fulfillment or workshop repair status",
+          "enum": ["Pending", "In Progress", "Completed", "Delivered"]
+        },
+        "date": {
+          "type": "string",
+          "description": "ISO date string when order was entered"
+        },
+        "expectedDate": {
+          "type": "string",
+          "description": "Promised handover or delivery date"
+        },
+        "technician": {
+          "type": "string",
+          "description": "Assigned workshop technician name",
+          "maxLength": 80
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Staff username who created the ticket",
+          "maxLength": 80
+        },
+        "notes": {
+          "type": "string",
+          "description": "Internal workshop diagnosis notes",
+          "maxLength": 1000
+        },
+        "productCategory": {
+          "type": "string",
+          "description": "Category for sales items",
+          "maxLength": 80
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Units sold for item orders"
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit rate for counter sale item"
+        },
+        "warranty": {
+          "type": "string",
+          "description": "Warranty period provided",
+          "maxLength": 50
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment tender method",
+          "maxLength": 40
+        }
+      },
+      "required": ["id", "name", "phone", "model", "problem", "cost", "deposit", "status", "date"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Spare part, component, or counter accessory item",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique SKU or item ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Part or accessory item name",
+          "maxLength": 150
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock keeping unit code",
+          "maxLength": 50
+        },
+        "qty": {
+          "type": "number",
+          "description": "Available stock quantity on hand"
+        },
+        "category": {
+          "type": "string",
+          "description": "Component or accessory category",
+          "maxLength": 80
+        },
+        "brand": {
+          "type": "string",
+          "description": "Target device manufacturer",
+          "maxLength": 50
+        },
+        "model": {
+          "type": "string",
+          "description": "Compatible model identifier",
+          "maxLength": 100
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Cost price per unit"
+        },
+        "salePrice": {
+          "type": "number",
+          "description": "Retail selling price per unit"
+        },
+        "minStock": {
+          "type": "number",
+          "description": "Low-stock reorder warning threshold"
+        }
+      },
+      "required": ["id", "name", "sku", "qty"]
+    },
+    "AccountTransaction": {
+      "title": "AccountTransaction",
+      "description": "Income or expense ledger record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique transaction record identifier"
+        },
+        "type": {
+          "type": "string",
+          "description": "Transaction direction: income or expense",
+          "enum": ["income", "expense"]
+        },
+        "category": {
+          "type": "string",
+          "description": "Accounting category name",
+          "maxLength": 80
+        },
+        "amount": {
+          "type": "number",
+          "description": "Monetary value of transaction"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of transaction"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment tender channel",
+          "enum": ["Cash", "UPI", "Card", "Bank Transfer"]
+        },
+        "referenceId": {
+          "type": "string",
+          "description": "External payment or bank reference ID",
+          "maxLength": 100
+        },
+        "notes": {
+          "type": "string",
+          "description": "Description or remarks",
+          "maxLength": 500
+        }
+      },
+      "required": ["id", "type", "category", "amount", "date", "paymentMethod"]
+    },
+    "ShopProfileDoc": {
+      "title": "ShopProfileDoc",
+      "description": "Workshop shop profile, contact information, receipt settings, and configuration",
+      "type": "object",
+      "properties": {
+        "shopName": {
+          "type": "string",
+          "description": "Registered workshop / store name",
+          "maxLength": 150
+        },
+        "phone": {
+          "type": "string",
+          "description": "Shop contact phone number",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "description": "Shop support email address",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical store address",
+          "maxLength": 300
+        },
+        "gst": {
+          "type": "string",
+          "description": "Tax or GSTIN identification number",
+          "maxLength": 40
+        },
+        "taxRate": {
+          "type": "number",
+          "description": "Default tax percentage rate"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency symbol",
+          "maxLength": 10
+        },
+        "terms": {
+          "type": "string",
+          "description": "Repair and warranty terms printed on receipts",
+          "maxLength": 2000
+        }
+      },
+      "required": ["shopName", "phone", "address"]
+    },
+    "ConnectedDevice": {
+      "title": "ConnectedDevice",
+      "description": "Hardware device or terminal requesting or granted owner permission to connect to the shop system",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique device identifier"
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Custom device nickname or terminal name",
+          "maxLength": 100
+        },
+        "deviceType": {
+          "type": "string",
+          "description": "Type of client hardware",
+          "enum": ["desktop", "laptop", "tablet", "mobile", "terminal"]
+        },
+        "browser": {
+          "type": "string",
+          "description": "Browser and operating system summary",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "Access role assigned by store owner",
+          "enum": ["owner", "staff", "technician", "display"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Connection authorization status",
+          "enum": ["authorized", "pending_approval", "revoked", "rejected"]
+        },
+        "pairingCode": {
+          "type": "string",
+          "description": "Short authorization or pairing code",
+          "maxLength": 10
+        },
+        "isPrimaryOwnerDevice": {
+          "type": "boolean",
+          "description": "Whether this terminal is designated as the primary owner workstation"
+        },
+        "canCreateOrders": {
+          "type": "boolean",
+          "description": "Permission to create orders and sales"
+        },
+        "canEditOrders": {
+          "type": "boolean",
+          "description": "Permission to edit orders"
+        },
+        "canDeleteOrders": {
+          "type": "boolean",
+          "description": "Permission to delete records"
+        },
+        "canViewAccounts": {
+          "type": "boolean",
+          "description": "Permission to view daily accounts and profits"
+        },
+        "canManageInventory": {
+          "type": "boolean",
+          "description": "Permission to edit inventory parts and stock"
+        },
+        "requestedAt": {
+          "type": "string",
+          "description": "ISO timestamp when connection permission was requested"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "ISO timestamp when owner approved the device"
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "description": "ISO timestamp of most recent activity"
+        },
+        "approvedBy": {
+          "type": "string",
+          "description": "Owner identifier who granted permission",
+          "maxLength": 80
+        }
+      },
+      "required": ["id", "deviceName", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Registered staff and admin user accounts with authentication status",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the user",
+          "maxLength": 100
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique username used for login",
+          "maxLength": 60
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 120
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "Password credential or hash",
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "description": "User access role",
+          "enum": ["owner", "staff", "admin"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Authentication status: active or blocked",
+          "enum": ["active", "blocked"]
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 40
+        },
+        "avatarColor": {
+          "type": "string",
+          "description": "Hex avatar color code",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO date string when user registered"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "description": "ISO date string of most recent login"
+        }
+      },
+      "required": ["id", "username", "status"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "RepairOrder",
+      "description": "Customer mobile repair orders and counter sales orders"
+    },
+    "/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Workshop spare parts and accessory inventory stock"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "AccountTransaction",
+      "description": "Daily income and expense accounting ledger transactions"
+    },
+    "/settings/{configDocId}": {
+      "schema": "ShopProfileDoc",
+      "description": "Workshop store profile and receipt configuration"
+    },
+    "/devices/{deviceId}": {
+      "schema": "ConnectedDevice",
+      "description": "Authorized hardware devices and terminals managed by the store owner"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts collection with status check (active or blocked)"
+    },
+    "/test/{testDocId}": {
+      "schema": "RepairOrder",
+      "description": "Diagnostic document used to verify Firestore connectivity"
+    }
+  }
+}

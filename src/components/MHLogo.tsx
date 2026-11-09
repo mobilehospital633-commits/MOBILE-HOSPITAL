@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import mhLogoAssetWebp from '../assets/images/mh_logo_icon.webp';
 import mhLogoAsset from '../assets/images/mh_logo_icon_1788498446351.jpg';
 
 interface MHLogoProps {
@@ -59,13 +60,30 @@ export const MHLogo: React.FC<MHLogoProps> = ({
         style={typeof size === 'number' ? { width: size, height: size } : undefined}
       >
         {!useVector && targetSrc && !imgError ? (
-          <img
-            src={targetSrc}
-            alt="MH Logo"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover"
-            onError={() => setImgError(true)}
-          />
+          customUrl ? (
+            <img
+              src={targetSrc}
+              alt="MH Logo"
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <picture className="w-full h-full block">
+              <source srcSet={mhLogoAssetWebp} type="image/webp" />
+              <img
+                src={targetSrc}
+                alt="MH Logo"
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            </picture>
+          )
         ) : (
           /* High-contrast precision vector fallback for MH Monogram */
           <svg

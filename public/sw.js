@@ -39,8 +39,21 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Skip browser extensions and non-HTTP
+  // Skip browser extensions, non-HTTP, dev server files, HMR, control plane, and cloud APIs
   if (!url.protocol.startsWith('http')) return;
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.includes('__aistudio_') ||
+    url.pathname.includes('vite') ||
+    url.pathname.includes('/fs/') ||
+    url.port === '8000' ||
+    url.hostname.includes('firestore') ||
+    url.hostname.includes('googleapis')
+  ) {
+    return;
+  }
 
   // Google fonts or static assets: Cache first
   if (

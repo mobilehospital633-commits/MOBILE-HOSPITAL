@@ -183,7 +183,7 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
       app: 'Mobile Hospital POS & Workshop Management',
       version: '2.4',
       exportedAt: new Date().toISOString(),
-      shopName: profile.shopName || profile.name || 'Mobile Hospital',
+      shopName: profile.shopName || 'Mobile Hospital',
       orders,
       inventory,
       transactions,
@@ -273,7 +273,7 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
       app: 'Mobile Hospital POS & Workshop Management',
       version: '2.4',
       exportedAt: new Date().toISOString(),
-      shopName: profile.shopName || profile.name || 'Mobile Hospital',
+      shopName: profile.shopName || 'Mobile Hospital',
       orders,
       inventory,
       transactions,
@@ -487,6 +487,8 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
               <img
                 src={googleUser.photoURL}
                 alt={googleUser.displayName || 'Google User'}
+                loading="lazy"
+                decoding="async"
                 className="w-11 h-11 rounded-full border border-zinc-200 shadow-2xs"
                 referrerPolicy="no-referrer"
               />
@@ -531,6 +533,43 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Auto Sync Status & Protection Card */}
+      <div className="p-5 rounded-2xl bg-white border border-zinc-200 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <RotateCw className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-zinc-900">Continuous Auto Sync</h4>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active & Safeguarding
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Automatically captures and saves repair tickets, customer dues, inventory parts, and cash transactions in real time.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={handlePerformBackup}
+            disabled={isBackingUp || !googleUser}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              googleUser
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed'
+            }`}
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isBackingUp ? 'animate-spin' : ''}`} />
+            <span>{isBackingUp ? 'Syncing...' : 'Sync Cloud Now'}</span>
+          </button>
+        </div>
+      </div>
 
       {/* Backup Payload Action Card */}
       <div className="p-6 rounded-2xl bg-white border border-zinc-200 shadow-2xs">
@@ -752,7 +791,7 @@ export const GoogleDriveBackupView: React.FC<GoogleDriveBackupViewProps> = ({
                   <div>
                     <span className="text-zinc-500">Shop Name:</span>
                     <div className="font-semibold text-zinc-900">
-                      {restorePayloadPreview.shopName || restorePayloadPreview.profile?.name}
+                      {restorePayloadPreview.shopName || restorePayloadPreview.profile?.shopName || 'Mobile Hospital'}
                     </div>
                   </div>
                   <div>

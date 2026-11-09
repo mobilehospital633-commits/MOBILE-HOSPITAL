@@ -12,7 +12,447 @@ body {
   background-color: #fafafa;
   color: #18181b;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+:root {
+  --spring-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --smooth-duration: 0.18s;
+}
+
+/* ============================================================
+   SMOOTHNESS & FLUID SCROLLING ARCHITECTURE
+   ============================================================ */
+
+/* 1. Ultra-Smooth 120Hz/60Hz Mode (Default) - Applied to Window, Body, Main & All Scrollpanes */
+html[data-smoothness="ultra"],
+html:not([data-smoothness]),
+html[data-smoothness="ultra"] body,
+html:not([data-smoothness]) body,
+html[data-smoothness="ultra"] main,
+html:not([data-smoothness]) main,
+html[data-smoothness="ultra"] .overflow-y-auto,
+html:not([data-smoothness]) .overflow-y-auto,
+html[data-smoothness="ultra"] .overflow-x-auto,
+html:not([data-smoothness]) .overflow-x-auto,
+html[data-smoothness="ultra"] .smooth-scroll,
+html:not([data-smoothness]) .smooth-scroll {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* GPU Hardware Acceleration for Buttery-Smooth 120Hz/60Hz Scrollpanes */
+main,
+.smooth-scroll,
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  /* Promote to compositor layer to avoid reflow/repaint stutter */
+  will-change: scroll-position;
+  transform: translateZ(0);
+}
+
+html[data-smoothness="ultra"] *,
+html:not([data-smoothness]) * {
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-smoothness="ultra"] button,
+html[data-smoothness="ultra"] a,
+html[data-smoothness="ultra"] select,
+html[data-smoothness="ultra"] input,
+html[data-smoothness="ultra"] .elevated-card,
+html:not([data-smoothness]) button,
+html:not([data-smoothness]) a {
+  transition-timing-function: var(--spring-ease);
+}
+
+/* Smooth Interactive Micro-Interactions */
+html[data-smoothness="ultra"] button:active:not(:disabled),
+html:not([data-smoothness]) button:active:not(:disabled) {
+  transform: scale(0.982);
+  transition-duration: 0.08s;
+}
+
+/* Smooth Modals and Dropdowns */
+.smooth-scale-in {
+  animation: smoothScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes smoothScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.965) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.smooth-fade-in {
+  animation: smoothFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes smoothFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. Balanced Smooth Mode */
+html[data-smoothness="balanced"],
+html[data-smoothness="balanced"] body,
+html[data-smoothness="balanced"] main,
+html[data-smoothness="balanced"] .overflow-y-auto,
+html[data-smoothness="balanced"] .overflow-x-auto {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+html[data-smoothness="balanced"] button,
+html[data-smoothness="balanced"] a,
+html[data-smoothness="balanced"] .elevated-card {
+  transition: all 0.15s ease;
+}
+
+/* 3. Instant / High-Speed POS Mode (Zero Transition Lag) */
+html[data-smoothness="fast"] * {
+  scroll-behavior: auto !important;
+  transition-duration: 0.001s !important;
+  animation-duration: 0.001s !important;
+  transition-delay: 0s !important;
+}
+
+/* ============================================================
+   SHARPNESS SYSTEM ENGINE
+   ============================================================ */
+
+/* 1. Ultra-Sharp High-DPI Razor Definition (Default) */
+html[data-sharpness="ultra"],
+html:not([data-sharpness]) {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+}
+html[data-sharpness="ultra"] svg,
+html:not([data-sharpness]) svg {
+  shape-rendering: geometricPrecision;
+}
+html[data-sharpness="ultra"] img,
+html[data-sharpness="ultra"] canvas,
+html:not([data-sharpness]) img,
+html:not([data-sharpness]) canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Crisp Hairline Borders for Ultra-Sharp mode */
+html[data-sharpness="ultra"] .border,
+html[data-sharpness="ultra"] .border-t,
+html[data-sharpness="ultra"] .border-b,
+html[data-sharpness="ultra"] .border-l,
+html[data-sharpness="ultra"] .border-r,
+html[data-sharpness="ultra"] table,
+html[data-sharpness="ultra"] th,
+html[data-sharpness="ultra"] td {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html.dark[data-sharpness="ultra"] .border,
+html.dark[data-sharpness="ultra"] .border-t,
+html.dark[data-sharpness="ultra"] .border-b,
+html.dark[data-sharpness="ultra"] .border-l,
+html.dark[data-sharpness="ultra"] .border-r,
+html.dark[data-sharpness="ultra"] table,
+html.dark[data-sharpness="ultra"] th,
+html.dark[data-sharpness="ultra"] td {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* 2. Crisp Studio Standard Mode */
+html[data-sharpness="crisp"] {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+}
+
+/* 3. Soft Focus Mode */
+html[data-sharpness="soft"] {
+  -webkit-font-smoothing: auto;
+  text-rendering: auto;
+}
+html[data-sharpness="soft"] * {
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ============================================================
+   THERMAL PRINTHEAD SHARPNESS ENGINE (RECEIPTS & BARCODES)
+   ============================================================ */
+
+#printableReceipt[data-thermal-sharpness="ultra"],
+#printableReceipt:not([data-thermal-sharpness]) {
+  text-rendering: geometricPrecision !important;
+  -webkit-font-smoothing: none !important;
+}
+#printableReceipt[data-thermal-sharpness="ultra"] img,
+#printableReceipt[data-thermal-sharpness="ultra"] canvas,
+#printableReceipt[data-thermal-sharpness="ultra"] svg,
+#printableReceipt:not([data-thermal-sharpness]) img,
+#printableReceipt:not([data-thermal-sharpness]) canvas,
+#printableReceipt:not([data-thermal-sharpness]) svg {
+  image-rendering: pixelated !important;
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: crisp-edges !important;
+}
+#printableReceipt[data-thermal-sharpness="ultra"] * {
+  font-weight: 500;
+}
+#printableReceipt[data-thermal-sharpness="ultra"] .font-bold {
+  font-weight: 800 !important;
+}
+#printableReceipt[data-thermal-sharpness="ultra"] .border-b,
+#printableReceipt[data-thermal-sharpness="ultra"] .border-t,
+#printableReceipt[data-thermal-sharpness="ultra"] .border-dashed {
+  border-color: #000000 !important;
+}
+
+
+/* ============================================================
+   WORKSPACE BACKGROUND STYLES & PATTERNS
+   ============================================================ */
+
+.app-workspace-bg {
+  position: relative;
+  min-height: 100%;
+  transition: background-color 0.2s ease;
+}
+
+/* 1. Technical Workbench Grid (Default) */
+html[data-bg-style="workbench"] .app-workspace-bg,
+html:not([data-bg-style]) .app-workspace-bg {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, var(--theme-accent-light) 0%, transparent 75%),
+    linear-gradient(to right, rgba(15, 23, 42, 0.042) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.042) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+html.theme-glacier[data-bg-style="workbench"] .app-workspace-bg,
+html.theme-glacier:not([data-bg-style]) .app-workspace-bg {
+  background-color: #f1f5f9;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(14, 165, 233, 0.09) 0%, transparent 75%),
+    linear-gradient(to right, rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+html.theme-sepia[data-bg-style="workbench"] .app-workspace-bg,
+html.theme-sepia:not([data-bg-style]) .app-workspace-bg {
+  background-color: #fbf6ec;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(217, 119, 6, 0.08) 0%, transparent 75%),
+    linear-gradient(to right, rgba(66, 57, 45, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(66, 57, 45, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+html.dark[data-bg-style="workbench"] .app-workspace-bg,
+html.dark:not([data-bg-style]) .app-workspace-bg {
+  background-color: #09090b;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, var(--theme-accent-light) 0%, transparent 75%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.038) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.038) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+
+/* 2. Ambient Studio Glow */
+html[data-bg-style="glow"] .app-workspace-bg {
+  background-color: #f9fafb;
+  background-image:
+    radial-gradient(900px circle at 50% -100px, var(--theme-accent-light) 0%, transparent 80%),
+    radial-gradient(650px circle at 100% 100%, var(--theme-accent-light) 0%, transparent 70%);
+}
+html.theme-glacier[data-bg-style="glow"] .app-workspace-bg {
+  background-color: #f1f5f9;
+  background-image:
+    radial-gradient(900px circle at 50% -100px, rgba(8, 145, 178, 0.14) 0%, transparent 80%),
+    radial-gradient(650px circle at 100% 100%, rgba(59, 130, 246, 0.09) 0%, transparent 70%);
+}
+html.theme-sepia[data-bg-style="glow"] .app-workspace-bg {
+  background-color: #fbf7ee;
+  background-image:
+    radial-gradient(900px circle at 50% -100px, rgba(217, 119, 6, 0.12) 0%, transparent 80%),
+    radial-gradient(650px circle at 100% 100%, rgba(180, 83, 9, 0.07) 0%, transparent 70%);
+}
+html.dark[data-bg-style="glow"] .app-workspace-bg {
+  background-color: #09090b;
+  background-image:
+    radial-gradient(900px circle at 50% -100px, var(--theme-accent-light) 0%, transparent 80%),
+    radial-gradient(650px circle at 100% 100%, var(--theme-accent-light) 0%, transparent 70%);
+}
+
+/* 3. Micro-Dot Matrix */
+html[data-bg-style="dots"] .app-workspace-bg {
+  background-color: #f8fafc;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.13) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
+}
+html.theme-glacier[data-bg-style="dots"] .app-workspace-bg {
+  background-color: #f1f5f9;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.14) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
+}
+html.theme-sepia[data-bg-style="dots"] .app-workspace-bg {
+  background-color: #fbf7ee;
+  background-image: radial-gradient(rgba(66, 57, 45, 0.14) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
+}
+html.dark[data-bg-style="dots"] .app-workspace-bg {
+  background-color: #09090b;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
+}
+
+/* 4. Schematic Blueprint CAD Grid */
+html[data-bg-style="blueprint"] .app-workspace-bg {
+  background-color: #f4f6fb;
+  background-image:
+    linear-gradient(to right, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(37, 99, 235, 0.11) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.11) 1px, transparent 1px);
+  background-size: 12px 12px, 12px 12px, 48px 48px, 48px 48px;
+}
+html.theme-glacier[data-bg-style="blueprint"] .app-workspace-bg {
+  background-color: #eff6ff;
+  background-image:
+    linear-gradient(to right, rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(14, 165, 233, 0.13) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.13) 1px, transparent 1px);
+  background-size: 12px 12px, 12px 12px, 48px 48px, 48px 48px;
+}
+html.theme-sepia[data-bg-style="blueprint"] .app-workspace-bg {
+  background-color: #fbf6ec;
+  background-image:
+    linear-gradient(to right, rgba(180, 83, 9, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(180, 83, 9, 0.045) 1px, transparent 1px),
+    linear-gradient(to right, rgba(180, 83, 9, 0.11) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(180, 83, 9, 0.11) 1px, transparent 1px);
+  background-size: 12px 12px, 12px 12px, 48px 48px, 48px 48px;
+}
+html.dark[data-bg-style="blueprint"] .app-workspace-bg {
+  background-color: #080d1a;
+  background-image:
+    linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(59, 130, 246, 0.13) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.13) 1px, transparent 1px);
+  background-size: 12px 12px, 12px 12px, 48px 48px, 48px 48px;
+}
+
+/* 5. Circuit Tech Mesh */
+html[data-bg-style="mesh"] .app-workspace-bg {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(45deg, rgba(15, 23, 42, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(15, 23, 42, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(15, 23, 42, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.03) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+html.theme-glacier[data-bg-style="mesh"] .app-workspace-bg {
+  background-color: #f1f5f9;
+  background-image:
+    linear-gradient(45deg, rgba(14, 165, 233, 0.035) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(14, 165, 233, 0.035) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(14, 165, 233, 0.035) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(14, 165, 233, 0.035) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+html.theme-sepia[data-bg-style="mesh"] .app-workspace-bg {
+  background-color: #fbf7ee;
+  background-image:
+    linear-gradient(45deg, rgba(66, 57, 45, 0.035) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(66, 57, 45, 0.035) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(66, 57, 45, 0.035) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(66, 57, 45, 0.035) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+html.dark[data-bg-style="mesh"] .app-workspace-bg {
+  background-color: #09090b;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* 6. Clean Minimalist Satin Canvas */
+html[data-bg-style="clean"] .app-workspace-bg {
+  background-color: #fafafa;
+  background-image: none;
+}
+html.theme-glacier[data-bg-style="clean"] .app-workspace-bg {
+  background-color: #f1f5f9;
+  background-image: none;
+}
+html.theme-sepia[data-bg-style="clean"] .app-workspace-bg {
+  background-color: #fbf7ee;
+  background-image: none;
+}
+html.dark[data-bg-style="clean"] .app-workspace-bg {
+  background-color: #09090b;
+  background-image: none;
+}
+
+/* ============================================================
+   GLOBAL REFINED INTERFACE STYLES & ACCESSIBILITY
+   ============================================================ */
+
+/* Sleek Minimalist Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Tabular Figures for All Numerical Data */
+.tabular-nums, table td, .font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Interactive Elevation */
+.elevated-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.elevated-card:hover {
+  border-color: rgba(0, 0, 0, 0.14);
 }
 
 /* Dark Mode Global Support */
@@ -87,9 +527,26 @@ html.dark textarea::placeholder {
   color: #71717a !important;
 }
 
-html.dark header {
+html.dark header:not([style*="background"]) {
   background-color: rgba(18, 18, 21, 0.9) !important;
   border-color: #27272a !important;
+}
+
+/* True Pitch Black AMOLED / OLED Mode */
+html.theme-oled body,
+html.dark.theme-oled body,
+html.dark.theme-oled .app-workspace-bg {
+  background-color: #000000 !important;
+}
+html.dark.theme-oled .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #0c0c0e !important;
+  border-color: #1c1c20 !important;
+}
+html.dark.theme-oled .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #000000 !important;
+}
+html.dark.theme-oled .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #141418 !important;
 }
 
 html.dark .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
@@ -256,123 +713,6 @@ html[data-accent="orange"] aside nav button.font-semibold {
   border-left: 3px solid #f97316;
 }
 
-/* THEME MODE: Midnight Navy */
-html.theme-midnight body {
-  background-color: #0b1120 !important;
-  color: #f1f5f9 !important;
-}
-html.theme-midnight .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #0f172a !important;
-}
-html.theme-midnight .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
-  background-color: #0b1120 !important;
-}
-html.theme-midnight .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #1e293b !important;
-}
-html.theme-midnight .border-zinc-200:not(#printableReceipt, #printableReceipt *),
-html.theme-midnight .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #1e293b !important;
-}
-html.theme-midnight .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #334155 !important;
-}
-html.theme-midnight header {
-  background-color: rgba(15, 23, 42, 0.95) !important;
-  border-color: #1e293b !important;
-}
-html.theme-midnight input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
-html.theme-midnight textarea:not(#printableReceipt textarea),
-html.theme-midnight select:not(#printableReceipt select) {
-  background-color: #0b1120 !important;
-  color: #f8fafc !important;
-  border-color: #1e293b !important;
-}
-html.theme-midnight .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #1e293b !important;
-}
-html.theme-midnight .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #334155 !important;
-}
-
-/* THEME MODE: Nordic Forest */
-html.theme-forest body {
-  background-color: #06140e !important;
-  color: #ecfdf5 !important;
-}
-html.theme-forest .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #0d2118 !important;
-}
-html.theme-forest .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
-  background-color: #06140e !important;
-}
-html.theme-forest .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #143326 !important;
-}
-html.theme-forest .border-zinc-200:not(#printableReceipt, #printableReceipt *),
-html.theme-forest .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #183c2d !important;
-}
-html.theme-forest .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #23523e !important;
-}
-html.theme-forest header {
-  background-color: rgba(13, 33, 24, 0.95) !important;
-  border-color: #183c2d !important;
-}
-html.theme-forest input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
-html.theme-forest textarea:not(#printableReceipt textarea),
-html.theme-forest select:not(#printableReceipt select) {
-  background-color: #081a13 !important;
-  color: #f0fdf4 !important;
-  border-color: #183c2d !important;
-}
-html.theme-forest .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #143326 !important;
-}
-html.theme-forest .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #1c4735 !important;
-}
-
-/* THEME MODE: Cyber Carbon */
-html.theme-cyber body {
-  background-color: #090d16 !important;
-  color: #e2e8f0 !important;
-}
-html.theme-cyber .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #101726 !important;
-}
-html.theme-cyber .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
-  background-color: #090d16 !important;
-}
-html.theme-cyber .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #182238 !important;
-}
-html.theme-cyber .border-zinc-200:not(#printableReceipt, #printableReceipt *),
-html.theme-cyber .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #1f2d4a !important;
-}
-html.theme-cyber .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #2d4069 !important;
-}
-html.theme-cyber header {
-  background-color: rgba(16, 23, 38, 0.95) !important;
-  border-color: #1f2d4a !important;
-}
-html.theme-cyber input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
-html.theme-cyber textarea:not(#printableReceipt textarea),
-html.theme-cyber select:not(#printableReceipt select) {
-  background-color: #0a0f1c !important;
-  color: #f8fafc !important;
-  border-color: #1f2d4a !important;
-}
-html.theme-cyber .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #182238 !important;
-}
-html.theme-cyber .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #243252 !important;
-}
-
 /* THEME MODE: Warm Sand / Sepia */
 html.theme-sepia body {
   background-color: #fbf7ee !important;
@@ -407,7 +747,7 @@ html.theme-sepia .text-zinc-600:not(#printableReceipt, #printableReceipt *),
 html.theme-sepia .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
   color: #7d6e5d !important;
 }
-html.theme-sepia header {
+html.theme-sepia header:not([style*="background"]) {
   background-color: rgba(251, 247, 238, 0.95) !important;
   border-color: #e7dcce !important;
 }
@@ -477,163 +817,102 @@ html.theme-glacier .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
   background-color: #e2e8f0 !important;
 }
 
-/* THEME MODE: Deep Nebula Amethyst (Violet Obsidian Dark) */
-html.theme-amethyst body {
-  background-color: #0c0714 !important;
-  color: #f5f3ff !important;
-}
-html.theme-amethyst .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #150d24 !important;
-}
-html.theme-amethyst .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
-  background-color: #0c0714 !important;
-}
-html.theme-amethyst .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #22163a !important;
-}
-html.theme-amethyst .border-zinc-200:not(#printableReceipt, #printableReceipt *),
-html.theme-amethyst .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #2b1c48 !important;
-}
-html.theme-amethyst .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #3f2a68 !important;
-}
-html.theme-amethyst .text-zinc-900:not(#printableReceipt, #printableReceipt *) {
-  color: #faf5ff !important;
-}
-html.theme-amethyst .text-zinc-800:not(#printableReceipt, #printableReceipt *) {
-  color: #f3e8ff !important;
-}
-html.theme-amethyst .text-zinc-700:not(#printableReceipt, #printableReceipt *) {
-  color: #e9d5ff !important;
-}
-html.theme-amethyst .text-zinc-600:not(#printableReceipt, #printableReceipt *),
-html.theme-amethyst .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
-  color: #c084fc !important;
-}
-html.theme-amethyst header {
-  background-color: rgba(21, 13, 36, 0.95) !important;
-  border-color: #2b1c48 !important;
-}
-html.theme-amethyst input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
-html.theme-amethyst textarea:not(#printableReceipt textarea),
-html.theme-amethyst select:not(#printableReceipt select) {
-  background-color: #0c0714 !important;
-  color: #f5f3ff !important;
-  border-color: #2b1c48 !important;
-}
-html.theme-amethyst .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #22163a !important;
-}
-html.theme-amethyst .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #312152 !important;
-}
-
-/* THEME MODE: Amber Sunset Twilight */
-html.theme-sunset body {
-  background-color: #140d09 !important;
-  color: #fff7ed !important;
-}
-html.theme-sunset .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #20140e !important;
-}
-html.theme-sunset .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
-  background-color: #140d09 !important;
-}
-html.theme-sunset .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #2f1e16 !important;
-}
-html.theme-sunset .border-zinc-200:not(#printableReceipt, #printableReceipt *),
-html.theme-sunset .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #3b261c !important;
-}
-html.theme-sunset .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #553728 !important;
-}
-html.theme-sunset .text-zinc-900:not(#printableReceipt, #printableReceipt *) {
-  color: #fff7ed !important;
-}
-html.theme-sunset .text-zinc-800:not(#printableReceipt, #printableReceipt *) {
-  color: #ffedd5 !important;
-}
-html.theme-sunset .text-zinc-700:not(#printableReceipt, #printableReceipt *) {
-  color: #fed7aa !important;
-}
-html.theme-sunset .text-zinc-600:not(#printableReceipt, #printableReceipt *),
-html.theme-sunset .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
-  color: #fb923c !important;
-}
-html.theme-sunset header {
-  background-color: rgba(32, 20, 14, 0.95) !important;
-  border-color: #3b261c !important;
-}
-html.theme-sunset input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
-html.theme-sunset textarea:not(#printableReceipt textarea),
-html.theme-sunset select:not(#printableReceipt select) {
-  background-color: #140d09 !important;
-  color: #fff7ed !important;
-  border-color: #3b261c !important;
-}
-html.theme-sunset .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #2f1e16 !important;
-}
-html.theme-sunset .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #422a1f !important;
-}
-
-/* THEME MODE: Pure OLED True Black */
+/* THEME MODE: Obsidian AMOLED Black (100% True Black) */
 html.theme-oled body {
   background-color: #000000 !important;
-  color: #ffffff !important;
+  color: #f4f4f5 !important;
 }
 html.theme-oled .bg-white:not(#printableReceipt, #printableReceipt *) {
-  background-color: #0a0a0a !important;
+  background-color: #08080a !important;
 }
 html.theme-oled .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
   background-color: #000000 !important;
 }
 html.theme-oled .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  background-color: #171717 !important;
+  background-color: #121215 !important;
 }
 html.theme-oled .border-zinc-200:not(#printableReceipt, #printableReceipt *),
 html.theme-oled .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
-  border-color: #262626 !important;
+  border-color: #1a1a20 !important;
 }
 html.theme-oled .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
-  border-color: #404040 !important;
-}
-html.theme-oled .text-zinc-900:not(#printableReceipt, #printableReceipt *) {
-  color: #ffffff !important;
-}
-html.theme-oled .text-zinc-800:not(#printableReceipt, #printableReceipt *) {
-  color: #f5f5f5 !important;
-}
-html.theme-oled .text-zinc-700:not(#printableReceipt, #printableReceipt *) {
-  color: #e5e5e5 !important;
-}
-html.theme-oled .text-zinc-600:not(#printableReceipt, #printableReceipt *),
-html.theme-oled .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
-  color: #a3a3a3 !important;
+  border-color: #27272f !important;
 }
 html.theme-oled header {
-  background-color: rgba(10, 10, 10, 0.98) !important;
-  border-color: #262626 !important;
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  border-color: #1a1a20 !important;
 }
 html.theme-oled input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
 html.theme-oled textarea:not(#printableReceipt textarea),
 html.theme-oled select:not(#printableReceipt select) {
-  background-color: #000000 !important;
-  color: #ffffff !important;
-  border-color: #262626 !important;
+  background-color: #050507 !important;
+  color: #f4f4f5 !important;
+  border-color: #1f1f26 !important;
 }
 html.theme-oled .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
-  background-color: #171717 !important;
+  background-color: #141418 !important;
 }
 html.theme-oled .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
-  background-color: #262626 !important;
+  background-color: #1a1a20 !important;
+}
+
+/* THEME MODE: Cyber Matrix Forest (Diagnostic Emerald Dark) */
+html.theme-forest body {
+  background-color: #04120e !important;
+  color: #ecfdf5 !important;
+}
+html.theme-forest .bg-white:not(#printableReceipt, #printableReceipt *) {
+  background-color: #071f18 !important;
+}
+html.theme-forest .bg-zinc-50:not(#printableReceipt, #printableReceipt *) {
+  background-color: #04120e !important;
+}
+html.theme-forest .bg-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  background-color: #0d2e23 !important;
+}
+html.theme-forest .border-zinc-200:not(#printableReceipt, #printableReceipt *),
+html.theme-forest .border-zinc-100:not(#printableReceipt, #printableReceipt *) {
+  border-color: #134232 !important;
+}
+html.theme-forest .border-zinc-300:not(#printableReceipt, #printableReceipt *) {
+  border-color: #1b5e47 !important;
+}
+html.theme-forest .text-zinc-900:not(#printableReceipt, #printableReceipt *) {
+  color: #ecfdf5 !important;
+}
+html.theme-forest .text-zinc-800:not(#printableReceipt, #printableReceipt *) {
+  color: #d1fae5 !important;
+}
+html.theme-forest .text-zinc-700:not(#printableReceipt, #printableReceipt *) {
+  color: #a7f3d0 !important;
+}
+html.theme-forest .text-zinc-600:not(#printableReceipt, #printableReceipt *),
+html.theme-forest .text-zinc-500:not(#printableReceipt, #printableReceipt *) {
+  color: #6ee7b7 !important;
+}
+html.theme-forest header {
+  background-color: rgba(4, 18, 14, 0.95) !important;
+  border-color: #134232 !important;
+}
+html.theme-forest input:not([type="checkbox"]):not([type="radio"]):not(#printableReceipt input),
+html.theme-forest textarea:not(#printableReceipt textarea),
+html.theme-forest select:not(#printableReceipt select) {
+  background-color: #030d0a !important;
+  color: #ecfdf5 !important;
+  border-color: #134232 !important;
+}
+html.theme-forest .hover\:bg-zinc-50:hover:not(#printableReceipt *) {
+  background-color: #0d2e23 !important;
+}
+html.theme-forest .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
+  background-color: #134232 !important;
 }
 
 @media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
   body * {
     visibility: hidden;
   }
@@ -645,11 +924,62 @@ html.theme-oled .hover\:bg-zinc-100:hover:not(#printableReceipt *) {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 16px;
+    margin: 0 auto;
     border: none !important;
     box-shadow: none !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    overflow: hidden !important;
+  }
+  .receipt-watermark {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Paper Size Options */
+  #printableReceipt[data-paper-size="58mm"] {
+    width: 56mm !important;
+    max-width: 56mm !important;
+  }
+  #printableReceipt[data-paper-size="80mm"] {
+    width: 78mm !important;
+    max-width: 78mm !important;
+  }
+  #printableReceipt[data-paper-size="a5"] {
+    width: 142mm !important;
+    max-width: 142mm !important;
+  }
+  #printableReceipt[data-paper-size="a4"] {
+    width: 100% !important;
+    max-width: 195mm !important;
+  }
+  /* Margin Density Options */
+  #printableReceipt[data-margin="tight"] {
+    padding: 4px !important;
+  }
+  #printableReceipt[data-margin="normal"] {
+    padding: 14px !important;
+  }
+  #printableReceipt[data-margin="spacious"] {
+    padding: 24px !important;
+  }
+  /* Font Scale Options */
+  #printableReceipt[data-font="compact"] {
+    font-size: 10px !important;
+  }
+  #printableReceipt[data-font="normal"] {
+    font-size: 11.5px !important;
+  }
+  #printableReceipt[data-font="large"] {
+    font-size: 13.5px !important;
+  }
+  /* Pure Monochrome Thermal Mode */
+  #printableReceipt.mono-thermal {
+    filter: grayscale(100%) !important;
+  }
+  #printableReceipt.mono-thermal * {
+    background-color: transparent !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
   }
   .no-print {
     display: none !important;

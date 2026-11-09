@@ -1,268 +1,181 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Palette,
   Sun,
   Moon,
-  Monitor,
-  Palette,
-  Check,
-  Compass,
-  Coffee,
-  Leaf,
-  Zap,
-  Clock,
   Sparkles,
-  Flame,
-  Droplets,
-  Sliders,
-  CheckCircle2,
-  HelpCircle,
+  PanelLeft,
+  Check,
+  Eye,
+  Layers,
+  ChevronDown,
+  Monitor,
+  Grid,
+  Zap,
+  Focus,
 } from 'lucide-react';
-import { ThemeMode, ThemeAccent } from '../types';
 import {
-  PRESET_ACCENTS,
-  getSolarPhaseInfo,
-  resolveAccentColors,
-  SolarPhaseInfo,
-} from '../utils/themeUtils';
+  ThemeMode,
+  ThemeAccent,
+  BackgroundStyle,
+  MenuBarColorPreset,
+  MenuBarStyle,
+  SmoothnessLevel,
+  SharpnessLevel,
+  ThermalSharpnessLevel,
+} from '../types';
+import { MENU_BAR_STYLE_OPTIONS } from '../utils/menuBarUtils';
+import { SmoothnessSharpnessPanel } from './SmoothnessSharpnessPanel';
 
-interface ThemeSelectorProps {
+export interface ThemeSelectorProps {
   theme?: ThemeMode;
   accent?: ThemeAccent;
   customAccentColor?: string;
   accentGlow?: boolean;
+  backgroundStyle?: BackgroundStyle;
+  menuBarColor?: MenuBarColorPreset;
+  menuBarCustomColor?: string;
+  menuBarStyle?: MenuBarStyle;
+  menuBarHeaderSync?: boolean;
+  layoutWidth?: 'compact' | 'standard' | 'wide' | 'fluid';
+  smoothness?: SmoothnessLevel;
+  sharpness?: SharpnessLevel;
+  thermalSharpness?: ThermalSharpnessLevel;
   onChangeTheme: (theme: ThemeMode) => void;
   onChangeAccent: (accent: ThemeAccent) => void;
+  onChangeBackgroundStyle?: (style: BackgroundStyle) => void;
   onChangeCustomAccent?: (hex: string) => void;
   onToggleAccentGlow?: (enabled: boolean) => void;
+  onChangeMenuBarColor?: (color: MenuBarColorPreset) => void;
+  onChangeMenuBarCustomColor?: (hex: string) => void;
+  onChangeMenuBarStyle?: (style: MenuBarStyle) => void;
+  onChangeMenuBarHeaderSync?: (sync: boolean) => void;
+  onChangeLayoutWidth?: (width: 'compact' | 'standard' | 'wide' | 'fluid') => void;
+  onChangeSmoothness?: (smoothness: SmoothnessLevel) => void;
+  onChangeSharpness?: (sharpness: SharpnessLevel) => void;
+  onChangeThermalSharpness?: (sharpness: ThermalSharpnessLevel) => void;
+  initialTab?: 'accent' | 'canvas' | 'menubar' | 'engine';
   compact?: boolean;
 }
 
-export interface ThemeCategory {
-  categoryName: string;
-  options: ThemeOption[];
-}
+// Popular custom color inspiration starter swatches including Warm Sand & Earthy tones
+const QUICK_CUSTOM_SWATCHES = [
+  { name: 'Warm Sand', hex: '#d97706' },
+  { name: 'Desert Dune', hex: '#c2884a' },
+  { name: 'Royal Cobalt', hex: '#2563eb' },
+  { name: 'Matrix Emerald', hex: '#10b981' },
+  { name: 'Cyber Violet', hex: '#8b5cf6' },
+  { name: 'Velvet Crimson', hex: '#e11d48' },
+  { name: 'Electric Cyan', hex: '#06b6d4' },
+  { name: 'Carbon Stealth', hex: '#3f3f46' },
+];
 
-export interface ThemeOption {
-  id: ThemeMode;
-  name: string;
-  tagline: string;
-  desc: string;
-  badge: string;
-  category: 'dynamic' | 'daylight' | 'dark';
-  iconBg: string;
-  textColor: string;
-  previewBg: string;
-  previewCard: string;
-  previewText: string;
-  previewBorder: string;
-}
+// Quick menu bar swatches including Cashmere Sand
+const QUICK_MENU_BAR_SWATCHES = [
+  { name: 'Cashmere Sand', hex: '#f8f5ee' },
+  { name: 'Warm Espresso', hex: '#1b140e' },
+  { name: 'Deep Midnight', hex: '#0d0f17' },
+  { name: 'Obsidian Black', hex: '#000000' },
+  { name: 'Slate Titanium', hex: '#0f172a' },
+  { name: 'Clean White', hex: '#ffffff' },
+];
 
-export const THEME_MODES: ThemeOption[] = [
-  // Dynamic Adaptive
+// Custom Workspace Background Canvas Patterns
+const WORKSPACE_PATTERNS = [
   {
-    id: 'solar',
-    name: 'Dynamic Solar (Time-Adaptive)',
-    tagline: '24-Hour Cycle Auto Shift',
-    desc: 'Automatically shifts through Morning Glacier, Midday White, Golden Sand, and Midnight Navy based on your clock.',
-    badge: 'Adaptive',
-    category: 'dynamic',
-    iconBg: 'bg-amber-500/10 border-amber-500/30 text-amber-500',
-    textColor: 'text-amber-500',
-    previewBg: '#0b1120',
-    previewCard: '#0f172a',
-    previewText: '#f8fafc',
-    previewBorder: '#1e293b',
+    id: 'workbench' as const,
+    name: 'Technical ESD Grid',
+    badge: 'ESD Grid',
+    desc: '24px micro-grid with coordinate intersection marks',
   },
   {
-    id: 'system',
-    name: 'System Auto (OS Sync)',
-    tagline: 'Matches Computer OS',
-    desc: 'Automatically synchronizes with your device or operating system light/dark preference in real time.',
-    badge: 'OS Auto',
-    category: 'dynamic',
-    iconBg: 'bg-zinc-100 border-zinc-200 text-zinc-700',
-    textColor: 'text-zinc-600',
-    previewBg: '#fafafa',
-    previewCard: '#ffffff',
-    previewText: '#18181b',
-    previewBorder: '#e4e4e7',
+    id: 'glow' as const,
+    name: 'Ambient Studio Glow',
+    badge: 'Studio Glow',
+    desc: 'Dynamic radial lighting bloom reflecting custom accent',
   },
+  {
+    id: 'dots' as const,
+    name: 'Micro-Dot Matrix',
+    badge: 'Dot Matrix',
+    desc: '20px precision Swiss technical dotted matrix canvas',
+  },
+  {
+    id: 'blueprint' as const,
+    name: 'Schematic CAD Blueprint',
+    badge: 'CAD Blueprint',
+    desc: 'Motherboard drafting dual-grid schematic layout',
+  },
+  {
+    id: 'mesh' as const,
+    name: 'Circuit Tech Mesh',
+    badge: 'Tech Mesh',
+    desc: '45° angled micro-hardware lattice surface texture',
+  },
+  {
+    id: 'clean' as const,
+    name: 'Minimalist Satin Canvas',
+    badge: 'Satin Canvas',
+    desc: 'Distraction-free smooth matte studio surface',
+  },
+];
 
-  // Daylight & High Clarity
-  {
-    id: 'light',
-    name: 'Daylight White',
-    tagline: 'Clean & Crisp',
-    desc: 'Crisp, high-contrast daytime workshop display with maximum clarity under bench lamps.',
-    badge: 'Daylight',
-    category: 'daylight',
-    iconBg: 'bg-amber-50 border-amber-200 text-amber-600',
-    textColor: 'text-amber-600',
-    previewBg: '#fafafa',
-    previewCard: '#ffffff',
-    previewText: '#18181b',
-    previewBorder: '#e4e4e7',
-  },
-  {
-    id: 'glacier',
-    name: 'Arctic Glacier',
-    tagline: 'Frost Light Slate',
-    desc: 'Cool icy light slate with frost blue undertones that enhances screen contrast and parts readability.',
-    badge: 'Glacier',
-    category: 'daylight',
-    iconBg: 'bg-cyan-50 border-cyan-200 text-cyan-600',
-    textColor: 'text-cyan-600',
-    previewBg: '#f1f5f9',
-    previewCard: '#ffffff',
-    previewText: '#0f172a',
-    previewBorder: '#cbd5e1',
-  },
-  {
-    id: 'sepia',
-    name: 'Warm Sand (Sepia)',
-    tagline: 'Eye-Safe Paper',
-    desc: 'Soft warm parchment tone that filters harsh blue-light glare during lengthy diagnosis & micro-soldering.',
-    badge: 'Warm',
-    category: 'daylight',
-    iconBg: 'bg-amber-100/70 border-amber-300 text-amber-800',
-    textColor: 'text-amber-700',
-    previewBg: '#fbf7ee',
-    previewCard: '#fffdf7',
-    previewText: '#2e2820',
-    previewBorder: '#e7dcce',
-  },
-
-  // Evening & Bench Dark
-  {
-    id: 'dark',
-    name: 'OLED Charcoal',
-    tagline: 'Balanced Workshop Slate',
-    desc: 'Deep graphite charcoal canvas balanced for evening repairs and comfortable workbench focus.',
-    badge: 'Charcoal',
-    category: 'dark',
-    iconBg: 'bg-zinc-800 border-zinc-700 text-zinc-200',
-    textColor: 'text-zinc-300',
-    previewBg: '#09090b',
-    previewCard: '#18181b',
-    previewText: '#f4f4f5',
-    previewBorder: '#27272a',
-  },
-  {
-    id: 'oled',
-    name: 'True Black 100% OLED',
-    tagline: 'Pitch Black Zero Power',
-    desc: 'Absolute 100% true pitch black (#000000) for OLED/AMOLED counter displays with razor-sharp contrast.',
-    badge: 'True OLED',
-    category: 'dark',
-    iconBg: 'bg-black border-zinc-800 text-white',
-    textColor: 'text-white',
-    previewBg: '#000000',
-    previewCard: '#0a0a0a',
-    previewText: '#ffffff',
-    previewBorder: '#262626',
-  },
-  {
-    id: 'midnight',
-    name: 'Midnight Navy',
-    tagline: 'Aerospace Deep Indigo',
-    desc: 'Deep navy indigo slate designed for long night shifts, reducing optical fatigue.',
-    badge: 'Midnight',
-    category: 'dark',
-    iconBg: 'bg-blue-950/80 border-blue-800 text-blue-400',
-    textColor: 'text-blue-400',
-    previewBg: '#0b1120',
-    previewCard: '#0f172a',
-    previewText: '#f8fafc',
-    previewBorder: '#1e293b',
-  },
-  {
-    id: 'amethyst',
-    name: 'Nebula Amethyst',
-    tagline: 'Obsidian & Royal Violet',
-    desc: 'Deep royal obsidian dark theme with luminous violet highlights and tech aesthetics.',
-    badge: 'Amethyst',
-    category: 'dark',
-    iconBg: 'bg-purple-950/80 border-purple-800 text-purple-400',
-    textColor: 'text-purple-400',
-    previewBg: '#0c0714',
-    previewCard: '#150d24',
-    previewText: '#f5f3ff',
-    previewBorder: '#2b1c48',
-  },
-  {
-    id: 'sunset',
-    name: 'Amber Sunset Twilight',
-    tagline: 'Copper & Warm Twilight',
-    desc: 'Atmospheric twilight slate with warm amber and copper undertones for cozy workshop ambiance.',
-    badge: 'Sunset',
-    category: 'dark',
-    iconBg: 'bg-orange-950/80 border-orange-800 text-orange-400',
-    textColor: 'text-orange-400',
-    previewBg: '#140d09',
-    previewCard: '#20140e',
-    previewText: '#fff7ed',
-    previewBorder: '#3b261c',
-  },
-  {
-    id: 'forest',
-    name: 'Nordic Forest',
-    tagline: 'Pine & Botanical',
-    desc: 'Deep botanical dark slate with calming emerald accents and organic clarity.',
-    badge: 'Forest',
-    category: 'dark',
-    iconBg: 'bg-emerald-950/80 border-emerald-800 text-emerald-400',
-    textColor: 'text-emerald-400',
-    previewBg: '#06140e',
-    previewCard: '#0d2118',
-    previewText: '#ecfdf5',
-    previewBorder: '#183c2d',
-  },
-  {
-    id: 'cyber',
-    name: 'Cyber Carbon',
-    tagline: 'Matrix High-Tech Slate',
-    desc: 'Futuristic high-tech carbon matrix with cyan luminescent accents and high density.',
-    badge: 'Cyber',
-    category: 'dark',
-    iconBg: 'bg-cyan-950/80 border-cyan-800 text-cyan-400',
-    textColor: 'text-cyan-400',
-    previewBg: '#090d16',
-    previewCard: '#101726',
-    previewText: '#e2e8f0',
-    previewBorder: '#1f2d4a',
-  },
+// App Container Width Options
+const LAYOUT_WIDTH_OPTIONS = [
+  { id: 'standard' as const, name: 'Standard (1280px)', desc: 'Balanced desktop workspace' },
+  { id: 'wide' as const, name: 'Wide Studio (1536px)', desc: 'Expansive wide monitor view' },
+  { id: 'compact' as const, name: 'Compact (1024px)', desc: 'Focused center console' },
+  { id: 'fluid' as const, name: 'Fluid (100%)', desc: 'Edge-to-edge full width' },
 ];
 
 export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   theme = 'light',
-  accent = 'slate',
   customAccentColor = '#2563eb',
   accentGlow = true,
+  backgroundStyle = 'workbench',
+  menuBarCustomColor = '#0d0f17',
+  menuBarStyle = 'solid',
+  menuBarHeaderSync = true,
+  layoutWidth = 'standard',
+  smoothness = 'ultra',
+  sharpness = 'ultra',
+  thermalSharpness = 'ultra',
   onChangeTheme,
   onChangeAccent,
+  onChangeBackgroundStyle,
   onChangeCustomAccent,
   onToggleAccentGlow,
+  onChangeMenuBarColor,
+  onChangeMenuBarCustomColor,
+  onChangeMenuBarStyle,
+  onChangeMenuBarHeaderSync,
+  onChangeLayoutWidth,
+  onChangeSmoothness,
+  onChangeSharpness,
+  onChangeThermalSharpness,
+  initialTab = 'accent',
   compact = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'themes' | 'accents'>('themes');
-  const [customHexInput, setCustomHexInput] = useState(customAccentColor);
-  const [solarInfo, setSolarInfo] = useState<SolarPhaseInfo>(getSolarPhaseInfo());
+  const [activeTab, setActiveTab] = useState<'accent' | 'canvas' | 'menubar' | 'engine'>(initialTab);
+  const [accentHexInput, setAccentHexInput] = useState(customAccentColor);
+  const [menuBarHexInput, setMenuBarHexInput] = useState(menuBarCustomColor);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Update solar clock status
-  useEffect(() => {
-    const updateSolar = () => setSolarInfo(getSolarPhaseInfo());
-    const interval = setInterval(updateSolar, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const isDarkMode = theme === 'dark' || theme === 'oled' || theme === 'forest';
+  const isOledMode = theme === 'oled';
+  const isWarmSandMode = theme === 'sepia';
 
-  // Sync customHexInput when customAccentColor changes
+  // Sync state if props change
   useEffect(() => {
-    if (customAccentColor) setCustomHexInput(customAccentColor);
+    if (customAccentColor) setAccentHexInput(customAccentColor);
   }, [customAccentColor]);
 
-  // Close dropdown on outside click
+  useEffect(() => {
+    if (menuBarCustomColor) setMenuBarHexInput(menuBarCustomColor);
+  }, [menuBarCustomColor]);
+
+  // Handle outside click for compact dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -275,712 +188,1083 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     }
   }, [isOpen]);
 
-  const renderIcon = (mode?: ThemeMode | string, className = 'w-3.5 h-3.5') => {
-    switch (mode) {
-      case 'solar':
-        return <Clock className={className} />;
-      case 'glacier':
-        return <Droplets className={className} />;
-      case 'amethyst':
-        return <Sparkles className={className} />;
-      case 'sunset':
-        return <Flame className={className} />;
-      case 'oled':
-        return <Moon className={className} />;
-      case 'dark':
-        return <Moon className={className} />;
-      case 'midnight':
-        return <Compass className={className} />;
-      case 'sepia':
-        return <Coffee className={className} />;
-      case 'forest':
-        return <Leaf className={className} />;
-      case 'cyber':
-        return <Zap className={className} />;
-      case 'system':
-        return <Monitor className={className} />;
-      default:
-        return <Sun className={className} />;
+  const handleApplyCustomAccent = (hex: string) => {
+    const formatted = hex.startsWith('#') ? hex : `#${hex}`;
+    if (/^#[0-9A-Fa-f]{6}$/.test(formatted)) {
+      setAccentHexInput(formatted);
+      onChangeAccent('custom');
+      onChangeCustomAccent?.(formatted);
     }
   };
 
-  const currentThemeObj = THEME_MODES.find((m) => m.id === theme) || THEME_MODES[0];
-  const accentDetails = resolveAccentColors(accent, customHexInput);
-
-  const handleCustomColorApply = (hex: string) => {
-    setCustomHexInput(hex);
-    if (onChangeCustomAccent) {
-      onChangeCustomAccent(hex);
+  const handleApplyCustomMenuBar = (hex: string) => {
+    const formatted = hex.startsWith('#') ? hex : `#${hex}`;
+    if (/^#[0-9A-Fa-f]{6}$/.test(formatted)) {
+      setMenuBarHexInput(formatted);
+      onChangeMenuBarColor?.('custom');
+      onChangeMenuBarCustomColor?.(formatted);
     }
+  };
+
+  // 1-Click Suite: Warm Sand Experience
+  const handleApplyWarmSandSuite = () => {
+    onChangeTheme('sepia');
     onChangeAccent('custom');
+    onChangeCustomAccent?.('#d97706');
+    onChangeBackgroundStyle?.('workbench');
+    onChangeMenuBarColor?.('custom');
+    onChangeMenuBarCustomColor?.('#f8f5ee');
+    onChangeMenuBarStyle?.('solid');
+    onChangeMenuBarHeaderSync?.(true);
   };
 
-  // Compact Header Bar Mode
+  // -------------------------------------------------------------
+  // COMPACT VIEW (Dropdown Menu for App Header)
+  // -------------------------------------------------------------
   if (compact) {
     return (
-      <div className="relative" ref={menuRef}>
+      <div className="relative inline-block text-left" ref={menuRef}>
+        {/* Trigger Button in Header */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          title={`Theme: ${currentThemeObj.name}. Click to change theme or accent.`}
-          className="bg-white hover:bg-zinc-50 text-zinc-700 px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-colors border border-zinc-200 hover:border-zinc-300 active:scale-98 cursor-pointer shadow-2xs"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-98"
+          title="Custom Theme, Canvas & Menu Bar Settings"
+          aria-expanded={isOpen}
         >
-          <span className={currentThemeObj.textColor}>{renderIcon(theme, 'w-3.5 h-3.5')}</span>
-          <span className="hidden sm:inline capitalize">{currentThemeObj.badge}</span>
           <span
-            className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/15 shadow-2xs transition-colors"
-            style={{ backgroundColor: accentDetails.color }}
+            className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0 shadow-2xs transition-transform"
+            style={{
+              backgroundColor: customAccentColor,
+              boxShadow: accentGlow ? `0 0 8px ${customAccentColor}88` : undefined,
+            }}
           />
+          <span className="hidden md:inline">
+            {isWarmSandMode ? 'Warm Sand' : 'Custom Theme'}
+          </span>
+          <ChevronDown className="w-3 h-3 text-zinc-400" />
         </button>
 
+        {/* Dropdown Panel */}
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[85vh] flex flex-col">
-            {/* Header with Title and Mode Switcher */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100">
-              <div className="flex items-center gap-2">
+          <div className="absolute right-0 mt-2 w-92 sm:w-100 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 p-4 text-zinc-900 dark:text-zinc-100 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header with Title and Mode Switch */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white"
-                  style={{ backgroundColor: accentDetails.color }}
+                  className="w-6 h-6 rounded-lg flex items-center justify-center text-white shadow-2xs shrink-0"
+                  style={{ backgroundColor: customAccentColor }}
                 >
                   <Palette className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-900 leading-tight">Theme & Appearance</h4>
-                  <p className="text-[10px] text-zinc-400">
-                    {currentThemeObj.badge} • {accent === 'custom' ? customHexInput : accent}
-                  </p>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-tight truncate">Theme Studio</h4>
+                  <span className="text-[10px] text-zinc-400 font-mono">Custom Architecture</span>
                 </div>
               </div>
 
-              {/* Quick Tabs: Themes vs Accents */}
-              <div className="flex items-center p-0.5 bg-zinc-100 rounded-lg text-[11px] font-semibold">
+              {/* Light / Warm Sand / Dark / OLED Mode Switcher */}
+              <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs shrink-0">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('themes')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    activeTab === 'themes'
+                  onClick={() => onChangeTheme('light')}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                    theme === 'light'
                       ? 'bg-white text-zinc-900 shadow-2xs font-bold'
-                      : 'text-zinc-500 hover:text-zinc-800'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
                   }`}
+                  title="Daylight White Mode"
                 >
-                  Themes
+                  <Sun className="w-3 h-3 text-amber-500" />
+                  <span>Light</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('accents')}
-                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                    activeTab === 'accents'
-                      ? 'bg-white text-zinc-900 shadow-2xs font-bold'
-                      : 'text-zinc-500 hover:text-zinc-800'
+                  onClick={() => onChangeTheme('sepia')}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                    isWarmSandMode
+                      ? 'bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs font-bold'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
                   }`}
+                  title="Warm Sand & Parchment Eye Comfort"
                 >
-                  Accents
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-600/30 inline-block shadow-2xs" />
+                  <span>Sand</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeTheme('dark')}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-zinc-900 text-white shadow-2xs dark:bg-zinc-700 font-bold'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
+                  }`}
+                  title="Stealth Dark Mode"
+                >
+                  <Moon className="w-3 h-3 text-blue-400" />
+                  <span>Dark</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeTheme('oled')}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold transition-all cursor-pointer ${
+                    isOledMode
+                      ? 'bg-black text-white shadow-2xs border border-zinc-700 font-bold'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
+                  }`}
+                  title="True Pitch Black OLED Mode"
+                >
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  <span>OLED</span>
                 </button>
               </div>
             </div>
 
-            {/* Solar Info Pill if Solar active */}
-            {theme === 'solar' && (
-              <div className="mb-3 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="text-[11px] font-medium">
-                    Solar Phase: <strong className="font-bold">{solarInfo.label}</strong>
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">
-                  {solarInfo.timeString}
+            {/* Quick Warm Sand 1-Click Banner */}
+            <div className="mb-3 p-2 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-600/40 shrink-0 shadow-2xs" />
+                <span className="text-[11px] font-bold text-amber-950 dark:text-amber-200 truncate">
+                  Warm Sand Suite
                 </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleApplyWarmSandSuite}
+                className="px-2 py-0.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                1-Click Apply
+              </button>
+            </div>
+
+            {/* Segmented Controls for Tabs: Accent / Canvas / MenuBar / Engine */}
+            <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-800 p-0.5 mb-3 text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('accent')}
+                className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  activeTab === 'accent'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>Accent</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('canvas')}
+                className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  activeTab === 'canvas'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                <Grid className="w-3 h-3 text-purple-500" />
+                <span>Canvas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('menubar')}
+                className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  activeTab === 'menubar'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                <PanelLeft className="w-3 h-3 text-emerald-500" />
+                <span>Menu</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('engine')}
+                className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  activeTab === 'engine'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                <Zap className="w-3 h-3 text-blue-500" />
+                <span>Smoothness</span>
+              </button>
+            </div>
+
+            {/* TAB 1: CUSTOM BRAND ACCENT COLOR */}
+            {activeTab === 'accent' && (
+              <div className="space-y-3">
+                {/* Color Input & Hex Field */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                    Brand Accent Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={customAccentColor}
+                        onChange={(e) => handleApplyCustomAccent(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                      />
+                      <div
+                        className="w-8 h-8 rounded-xl border border-black/15 shadow-2xs flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
+                        style={{ backgroundColor: customAccentColor }}
+                      >
+                        <Palette className="w-3.5 h-3.5 text-white drop-shadow" />
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={accentHexInput}
+                      onChange={(e) => setAccentHexInput(e.target.value)}
+                      onBlur={() => handleApplyCustomAccent(accentHexInput)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomAccent(accentHexInput)}
+                      placeholder="#d97706"
+                      maxLength={7}
+                      className="flex-1 px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 uppercase text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyCustomAccent(accentHexInput)}
+                      className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    >
+                      Set
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Starter Swatches */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Quick Custom Swatches
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {QUICK_CUSTOM_SWATCHES.map((swatch) => {
+                      const isSelected = customAccentColor.toLowerCase() === swatch.hex.toLowerCase();
+                      return (
+                        <button
+                          key={swatch.hex}
+                          type="button"
+                          onClick={() => handleApplyCustomAccent(swatch.hex)}
+                          className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 font-bold shadow-2xs ring-1 ring-zinc-900/15'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                          title={swatch.name}
+                        >
+                          <span
+                            className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/15 shadow-2xs"
+                            style={{ backgroundColor: swatch.hex }}
+                          />
+                          <span className="text-[10px] font-mono truncate text-zinc-700 dark:text-zinc-300">{swatch.hex}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Ambient Glow Toggle */}
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Ambient Accent Glow</div>
+                    <div className="text-[10px] text-zinc-400">Radiant halo around buttons & tabs</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onToggleAccentGlow?.(!accentGlow)}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      accentGlow ? 'bg-zinc-900 dark:bg-amber-600' : 'bg-zinc-200 dark:bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-xs ${
+                        accentGlow ? 'right-0.5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Scrollable Content Body */}
-            <div className="overflow-y-auto pr-1 space-y-3 flex-1 max-h-96">
-              {activeTab === 'themes' ? (
-                <>
-                  {/* Dynamic Adaptive Group */}
-                  <div>
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
-                      Adaptive & Auto (2)
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {THEME_MODES.filter((m) => m.category === 'dynamic').map((item) => {
-                        const isActive = theme === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => onChangeTheme(item.id)}
-                            className={`flex items-center gap-2.5 p-2 rounded-xl text-left transition-all border cursor-pointer ${
-                              isActive
-                                ? 'bg-zinc-900 border-zinc-900 text-white font-semibold shadow-xs'
-                                : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
-                            }`}
-                          >
-                            <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                                isActive ? 'bg-zinc-800 border-zinc-700 text-white' : item.iconBg
-                              }`}
-                            >
-                              {renderIcon(item.id, 'w-3.5 h-3.5')}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-bold truncate">{item.name}</span>
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                                    isActive ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-100 text-zinc-600'
-                                  }`}
-                                >
-                                  {item.badge}
-                                </span>
-                              </div>
-                              <p
-                                className={`text-[10px] truncate leading-tight mt-0.5 ${
-                                  isActive ? 'text-zinc-300' : 'text-zinc-500'
-                                }`}
-                              >
-                                {item.desc}
-                              </p>
-                            </div>
-                            {isActive && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />}
-                          </button>
-                        );
-                      })}
-                    </div>
+            {/* TAB 2: WORKSPACE CANVAS & CONTAINER WIDTH */}
+            {activeTab === 'canvas' && (
+              <div className="space-y-3">
+                {/* Background Patterns */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Workspace Background</span>
+                    <span className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 capitalize">{backgroundStyle}</span>
                   </div>
-
-                  {/* Daylight & Clarity Group */}
-                  <div>
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
-                      Daylight & High-Clarity (3)
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {THEME_MODES.filter((m) => m.category === 'daylight').map((item) => {
-                        const isActive = theme === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => onChangeTheme(item.id)}
-                            className={`flex items-center gap-2.5 p-2 rounded-xl text-left transition-all border cursor-pointer ${
-                              isActive
-                                ? 'bg-zinc-900 border-zinc-900 text-white font-semibold shadow-xs'
-                                : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
-                            }`}
-                          >
-                            <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                                isActive ? 'bg-zinc-800 border-zinc-700 text-white' : item.iconBg
-                              }`}
-                            >
-                              {renderIcon(item.id, 'w-3.5 h-3.5')}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-bold truncate">{item.name}</span>
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                                    isActive ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-100 text-zinc-600'
-                                  }`}
-                                >
-                                  {item.badge}
-                                </span>
-                              </div>
-                              <p
-                                className={`text-[10px] truncate leading-tight mt-0.5 ${
-                                  isActive ? 'text-zinc-300' : 'text-zinc-500'
-                                }`}
-                              >
-                                {item.tagline}
-                              </p>
-                            </div>
-                            {isActive && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Evening & Dark Group */}
-                  <div>
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
-                      Bench & Night Dark (7)
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {THEME_MODES.filter((m) => m.category === 'dark').map((item) => {
-                        const isActive = theme === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => onChangeTheme(item.id)}
-                            className={`flex items-center gap-2.5 p-2 rounded-xl text-left transition-all border cursor-pointer ${
-                              isActive
-                                ? 'bg-zinc-900 border-zinc-900 text-white font-semibold shadow-xs'
-                                : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
-                            }`}
-                          >
-                            <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                                isActive ? 'bg-zinc-800 border-zinc-700 text-white' : item.iconBg
-                              }`}
-                            >
-                              {renderIcon(item.id, 'w-3.5 h-3.5')}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-bold truncate">{item.name}</span>
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                                    isActive ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-100 text-zinc-600'
-                                  }`}
-                                >
-                                  {item.badge}
-                                </span>
-                              </div>
-                              <p
-                                className={`text-[10px] truncate leading-tight mt-0.5 ${
-                                  isActive ? 'text-zinc-300' : 'text-zinc-500'
-                                }`}
-                              >
-                                {item.tagline}
-                              </p>
-                            </div>
-                            {isActive && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Preset Accents Palette */}
-                  <div>
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                      <span>Curated Accent Colors ({PRESET_ACCENTS.length})</span>
-                      <span className="text-[10px] font-semibold text-zinc-600 capitalize">
-                        {accent === 'custom' ? 'Custom' : accent}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {PRESET_ACCENTS.map((item) => {
-                        const isActive = accent === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => onChangeAccent(item.id)}
-                            title={item.name}
-                            className={`flex flex-col items-center gap-1 p-2 rounded-xl text-[11px] transition-all cursor-pointer border ${
-                              isActive
-                                ? 'border-zinc-900 bg-zinc-50 font-bold text-zinc-900 shadow-2xs ring-1 ring-zinc-900/20'
-                                : 'border-zinc-200 hover:bg-zinc-50 text-zinc-600'
-                            }`}
-                          >
-                            <span
-                              className="w-5 h-5 rounded-full shrink-0 shadow-2xs border border-black/15 flex items-center justify-center text-white transition-transform active:scale-95"
-                              style={{ backgroundColor: item.color }}
-                            >
-                              {isActive && <Check className="w-3 h-3 text-white stroke-[3]" />}
-                            </span>
-                            <span className="truncate w-full text-center text-[10px]">
-                              {item.name.split(' ')[0]}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Custom Hex Color Picker */}
-                  <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
-                        <Sliders className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>Custom Dynamic Hex Color</span>
-                      </span>
-                      {accent === 'custom' && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="relative cursor-pointer shrink-0">
-                        <input
-                          type="color"
-                          value={customHexInput.startsWith('#') ? customHexInput : '#2563eb'}
-                          onChange={(e) => handleCustomColorApply(e.target.value)}
-                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        />
-                        <div
-                          className="w-8 h-8 rounded-lg border border-black/20 shadow-2xs flex items-center justify-center text-white transition-transform hover:scale-105"
-                          style={{ backgroundColor: customHexInput }}
+                  <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                    {WORKSPACE_PATTERNS.map((pattern) => {
+                      const isActive = backgroundStyle === pattern.id;
+                      return (
+                        <button
+                          key={pattern.id}
+                          type="button"
+                          onClick={() => onChangeBackgroundStyle?.(pattern.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100 text-white dark:text-zinc-900 font-semibold shadow-xs'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
                         >
-                          <Palette className="w-4 h-4 drop-shadow" />
-                        </div>
-                      </label>
-                      <input
-                        type="text"
-                        value={customHexInput}
-                        onChange={(e) => setCustomHexInput(e.target.value)}
-                        onBlur={() => {
-                          if (/^#([0-9A-F]{3}){1,2}$/i.test(customHexInput)) {
-                            handleCustomColorApply(customHexInput);
-                          }
-                        }}
-                        placeholder="#2563eb"
-                        maxLength={7}
-                        className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border border-zinc-300 bg-white uppercase text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCustomColorApply(customHexInput)}
-                        className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-                      >
-                        Apply
-                      </button>
-                    </div>
+                          <span className="text-[11px] font-bold truncate">{pattern.name}</span>
+                          {isActive && <Check className="w-3 h-3 shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  {/* Ambient Accent Glow Toggle */}
-                  {onToggleAccentGlow && (
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-white">
-                      <div>
-                        <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Ambient Accent Glow</span>
-                        </span>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">
-                          Subtle luminous lighting on primary buttons and indicators
-                        </p>
+                {/* App Layout Width Selection */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    App Container Width
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {LAYOUT_WIDTH_OPTIONS.map((wOpt) => {
+                      const isWidthActive = layoutWidth === wOpt.id;
+                      return (
+                        <button
+                          key={wOpt.id}
+                          type="button"
+                          onClick={() => onChangeLayoutWidth?.(wOpt.id)}
+                          className={`p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                            isWidthActive
+                              ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 font-bold shadow-2xs ring-1 ring-zinc-900/15'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <span className="text-[11px] block text-zinc-900 dark:text-zinc-100 truncate">{wOpt.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: MENU BAR COLOR & STYLE */}
+            {activeTab === 'menubar' && (
+              <div className="space-y-3">
+                {/* Surface Finish */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Surface Finish</span>
+                    <span className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 capitalize">{menuBarStyle}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-0.5">
+                    {MENU_BAR_STYLE_OPTIONS.map((styleOpt) => {
+                      const isStyleActive = menuBarStyle === styleOpt.id;
+                      return (
+                        <button
+                          key={styleOpt.id}
+                          type="button"
+                          onClick={() => onChangeMenuBarStyle?.(styleOpt.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                            isStyleActive
+                              ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100 text-white dark:text-zinc-900 font-semibold shadow-xs'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold truncate">{styleOpt.name}</span>
+                          {isStyleActive && <Check className="w-3 h-3 shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Quick Menu Bar Swatches */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span>Menu Color Shortcuts</span>
+                    <span className="font-mono text-[9px] text-zinc-400">{menuBarCustomColor}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 mb-2">
+                    {QUICK_MENU_BAR_SWATCHES.map((sw) => {
+                      const isSel = menuBarCustomColor.toLowerCase() === sw.hex.toLowerCase();
+                      return (
+                        <button
+                          key={sw.hex}
+                          type="button"
+                          onClick={() => handleApplyCustomMenuBar(sw.hex)}
+                          className={`flex items-center gap-1.5 p-1 rounded-md border text-left cursor-pointer transition-all ${
+                            isSel
+                              ? 'border-zinc-900 dark:border-zinc-300 bg-zinc-50 dark:bg-zinc-800 font-bold'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50'
+                          }`}
+                          title={sw.name}
+                        >
+                          <span
+                            className="w-3 h-3 rounded-full border border-black/20 shrink-0"
+                            style={{ backgroundColor: sw.hex }}
+                          />
+                          <span className="text-[9px] truncate text-zinc-800 dark:text-zinc-200">{sw.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Menu Bar Color Picker */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                    Custom Menu Bar Hex
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={menuBarCustomColor}
+                        onChange={(e) => handleApplyCustomMenuBar(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                      />
+                      <div
+                        className="w-8 h-8 rounded-xl border border-black/15 shadow-2xs flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
+                        style={{ backgroundColor: menuBarCustomColor }}
+                      >
+                        <PanelLeft className="w-3.5 h-3.5 text-white drop-shadow" />
                       </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={menuBarHexInput}
+                      onChange={(e) => setMenuBarHexInput(e.target.value)}
+                      onBlur={() => handleApplyCustomMenuBar(menuBarHexInput)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomMenuBar(menuBarHexInput)}
+                      placeholder="#0d0f17"
+                      maxLength={7}
+                      className="flex-1 px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 uppercase text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyCustomMenuBar(menuBarHexInput)}
+                      className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    >
+                      Set
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sync Header Bar Toggle */}
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Sync Top Header Bar</div>
+                    <div className="text-[10px] text-zinc-400">Match header with menu bar</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onChangeMenuBarHeaderSync?.(!menuBarHeaderSync)}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      menuBarHeaderSync ? 'bg-zinc-900 dark:bg-amber-600' : 'bg-zinc-200 dark:bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-xs ${
+                        menuBarHeaderSync ? 'right-0.5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: SMOOTHNESS & SHARPNESS ENGINE (COMPACT) */}
+            {activeTab === 'engine' && (
+              <div className="space-y-3">
+                {/* Smoothness Level */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Smoothness Level</span>
+                    <span className="text-[10px] font-bold text-blue-600 capitalize">{smoothness}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'ultra' as const, label: 'Ultra', sub: '120Hz' },
+                      { id: 'balanced' as const, label: 'Balanced', sub: 'Smooth' },
+                      { id: 'fast' as const, label: 'Fast POS', sub: '0ms' },
+                    ].map((s) => (
                       <button
+                        key={s.id}
                         type="button"
-                        onClick={() => onToggleAccentGlow(!accentGlow)}
-                        className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          accentGlow ? 'bg-zinc-900' : 'bg-zinc-200'
+                        onClick={() => onChangeSmoothness?.(s.id)}
+                        className={`p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                          smoothness === s.id
+                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 font-bold'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
-                        <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-xs ${
-                            accentGlow ? 'right-1' : 'left-1'
-                          }`}
-                        />
+                        <div className="text-[10px] font-bold">{s.label}</div>
+                        <div className="text-[8px] text-zinc-400">{s.sub}</div>
                       </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Footer Summary */}
-            <div className="pt-2.5 mt-2.5 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
-              <span>{THEME_MODES.length} Themes • 12+ Colors</span>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-xs font-bold text-zinc-900 hover:text-zinc-600 cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
+                {/* Sharpness Level */}
+                <div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Visual Sharpness</span>
+                    <span className="text-[10px] font-bold text-emerald-600 capitalize">{sharpness}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'ultra' as const, label: 'Razor', sub: 'High-DPI' },
+                      { id: 'crisp' as const, label: 'Crisp', sub: 'Standard' },
+                      { id: 'soft' as const, label: 'Soft', sub: 'Eyecare' },
+                    ].map((sh) => (
+                      <button
+                        key={sh.id}
+                        type="button"
+                        onClick={() => onChangeSharpness?.(sh.id)}
+                        className={`p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                          sharpness === sh.id
+                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200 font-bold'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                        }`}
+                      >
+                        <div className="text-[10px] font-bold">{sh.label}</div>
+                        <div className="text-[8px] text-zinc-400">{sh.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Thermal Print Sharpness */}
+                <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-zinc-800 dark:text-zinc-200">Thermal POS Sharpness</div>
+                    <div className="text-[8px] text-zinc-400">Zero-dither barcode dots</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onChangeThermalSharpness?.(thermalSharpness === 'ultra' ? 'standard' : 'ultra')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                      thermalSharpness === 'ultra'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white dark:bg-zinc-800 text-zinc-600 border-zinc-300 dark:border-zinc-700'
+                    }`}
+                  >
+                    {thermalSharpness === 'ultra' ? 'Ultra' : 'Standard'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
     );
   }
 
-  // Full Expanded View for Settings Tab
+  // -------------------------------------------------------------
+  // FULL / EMBEDDED VIEW (SettingsTab & Customizer Modal)
+  // -------------------------------------------------------------
   return (
-    <div className="space-y-6">
-      {/* Live Terminal Preview Card */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 bg-zinc-50/50 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-200/80">
+    <div className="w-full space-y-6">
+      {/* Top Header Card */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm transition-transform"
+            style={{
+              backgroundColor: customAccentColor,
+              boxShadow: accentGlow ? `0 0 16px ${customAccentColor}66` : undefined,
+            }}
+          >
+            <Palette className="w-5 h-5 drop-shadow-xs" />
+          </div>
           <div>
-            <span className="text-xs font-bold text-zinc-900 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-zinc-700" />
-              <span>Real-Time Interactive Theme & Accent Preview</span>
-            </span>
-            <p className="text-[11px] text-zinc-500 mt-0.5">
-              Live simulation of buttons, status chips, order cards, and workbench contrast.
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <span>Custom Theme Architecture Studio</span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                Full Custom Studio
+              </span>
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Build your signature workshop terminal with Warm Sand, Daylight Light, Midnight Dark, or OLED modes, plus custom accents and canvas finishes.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-zinc-600 px-2.5 py-1 rounded-full bg-white border border-zinc-200 shadow-2xs">
-              Theme: <strong className="text-zinc-900 capitalize">{currentThemeObj.name}</strong>
-            </span>
-            <span
-              className="text-[11px] font-semibold text-white px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1.5"
-              style={{ backgroundColor: accentDetails.color }}
+        </div>
+
+        {/* Mode & 1-Click Setup Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1-Click Warm Sand Setup Action */}
+          <button
+            type="button"
+            onClick={handleApplyWarmSandSuite}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700 text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="Instant 1-Click Warm Sand Transformation"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs" />
+            <span>Apply Warm Sand Theme</span>
+          </button>
+
+          {/* Daylight / Warm Sand / Dark / OLED Mode Switcher Card */}
+          <div className="flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0">
+            <button
+              type="button"
+              onClick={() => onChangeTheme('light')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                theme === 'light' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
+              }`}
             >
-              <span className="w-2 h-2 rounded-full bg-white/80" />
-              <span className="capitalize">{accent === 'custom' ? customHexInput : accent}</span>
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeTheme('sepia')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isWarmSandMode ? 'bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-amber-400 border border-amber-600/40 inline-block shadow-2xs" />
+              <span>Warm Sand</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeTheme('dark')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                theme === 'dark' ? 'bg-zinc-900 text-white shadow-2xs dark:bg-zinc-700' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5 text-blue-400" />
+              <span>Dark</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeTheme('oled')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                theme === 'oled' ? 'bg-black text-white shadow-2xs border border-zinc-600' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" />
+              <span>OLED</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* COLUMN 1: CUSTOM BRAND ACCENT & GLOW */}
+        <div className="space-y-4 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                1. Brand Accent Color
+              </h4>
+            </div>
+            <span
+              className="text-xs font-mono font-bold px-2 py-0.5 rounded border"
+              style={{
+                borderColor: `${customAccentColor}44`,
+                backgroundColor: `${customAccentColor}15`,
+                color: customAccentColor,
+              }}
+            >
+              {customAccentColor}
             </span>
           </div>
-        </div>
 
-        {/* Miniature Workbench Card Simulation */}
-        <div
-          className="rounded-xl p-4 border transition-all duration-200 shadow-xs"
-          style={{
-            backgroundColor: currentThemeObj.previewBg,
-            borderColor: currentThemeObj.previewBorder,
-            color: currentThemeObj.previewText,
-          }}
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-black/10">
+          {/* Interactive Color Picker Card */}
+          <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Custom Color Picker
+              </label>
+              <span className="text-[11px] text-zinc-400 font-mono">Instant Apply</span>
+            </div>
+
             <div className="flex items-center gap-2.5">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shadow-2xs"
-                style={{
-                  backgroundColor: accentDetails.color,
-                  color: accentDetails.textColor,
-                }}
-              >
-                MH
-              </div>
-              <div>
-                <div className="text-xs font-bold flex items-center gap-2">
-                  <span>#T-1008 • iPhone 15 Pro Max</span>
-                  <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: accentDetails.lightBg,
-                      color: currentThemeObj.category === 'dark' ? accentDetails.textColorDark : accentDetails.color,
-                      border: `1px solid ${accentDetails.borderRgba}`,
-                    }}
-                  >
-                    In Progress
-                  </span>
-                </div>
-                <div className="text-[11px] opacity-70 mt-0.5">
-                  Customer: Johnathan Doe • Cracked AMOLED Display & Housing
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <span className="text-xs font-mono font-bold">₹4,999.00</span>
-              <button
-                type="button"
-                className="theme-primary-btn px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shadow-2xs"
-                style={{
-                  backgroundColor: accentDetails.color,
-                  color: accentDetails.textColor,
-                }}
-              >
-                View Ticket
-              </button>
-            </div>
-          </div>
-
-          {theme === 'solar' && (
-            <div className="pt-2.5 flex items-center justify-between text-[11px]">
-              <span className="flex items-center gap-1.5 opacity-80">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>
-                  Dynamic Solar Phase: <strong>{solarInfo.label}</strong> ({solarInfo.desc})
-                </span>
-              </span>
-              <span className="font-mono font-bold opacity-75">{solarInfo.timeString}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Theme Modes Selection (12 Curated Themes) */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-            Display Theme Archetypes ({THEME_MODES.length} Curated Modes)
-          </label>
-          <span className="text-xs text-zinc-500 font-medium">
-            Active: <strong className="text-zinc-900 capitalize">{currentThemeObj.name}</strong>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {THEME_MODES.map((item) => {
-            const isActive = theme === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onChangeTheme(item.id)}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  isActive
-                    ? 'border-zinc-900 bg-zinc-50 ring-2 ring-zinc-900/15 shadow-xs'
-                    : 'border-zinc-200 bg-white hover:bg-zinc-50/70'
-                }`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 shadow-2xs ${item.iconBg}`}
-                >
-                  {renderIcon(item.id, 'w-4 h-4')}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-bold text-zinc-900 truncate">
-                      {item.name}
-                    </span>
-                    {isActive ? (
-                      <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white shrink-0">
-                        <Check className="w-3 h-3" />
-                        <span>Active</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-zinc-400 font-medium uppercase">
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] font-medium text-zinc-500 mt-0.5">
-                    {item.tagline}
-                  </p>
-                  <p className="text-[11px] text-zinc-400 leading-snug mt-1 line-clamp-2">
-                    {item.desc}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Accent Color Palette & Custom Hex */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-            Accent Color Highlights & Custom Hex ({PRESET_ACCENTS.length}+ Accents)
-          </label>
-          <span className="text-xs text-zinc-500 font-medium">
-            Active: <strong className="text-zinc-900 capitalize">{accent === 'custom' ? customHexInput : accent}</strong>
-          </span>
-        </div>
-
-        {/* Presets Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 mb-3">
-          {PRESET_ACCENTS.map((item) => {
-            const isActive = accent === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onChangeAccent(item.id)}
-                className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  isActive
-                    ? 'border-zinc-900 bg-zinc-50 font-semibold text-zinc-900 ring-2 ring-zinc-900/10 shadow-xs'
-                    : 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700'
-                }`}
-              >
-                <span
-                  className="w-4 h-4 rounded-full shrink-0 shadow-2xs border border-black/15 flex items-center justify-center text-white"
-                  style={{ backgroundColor: item.color }}
-                >
-                  {isActive && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold truncate">{item.name.split(' ')[0]}</div>
-                  <div className="text-[10px] text-zinc-400 font-mono">{item.color}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Custom Color Picker & Ambient Glow Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Custom Color Card */}
-          <div className="p-3.5 bg-white rounded-xl border border-zinc-200 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <label className="relative cursor-pointer shrink-0">
+              <div className="relative">
                 <input
                   type="color"
-                  value={customHexInput.startsWith('#') ? customHexInput : '#2563eb'}
-                  onChange={(e) => handleCustomColorApply(e.target.value)}
-                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  value={customAccentColor}
+                  onChange={(e) => handleApplyCustomAccent(e.target.value)}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
                 />
                 <div
-                  className="w-9 h-9 rounded-xl border border-black/15 shadow-2xs flex items-center justify-center text-white transition-transform hover:scale-105"
-                  style={{ backgroundColor: customHexInput }}
+                  className="w-10 h-10 rounded-xl border border-black/20 shadow-md flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
+                  style={{ backgroundColor: customAccentColor }}
                 >
-                  <Palette className="w-4 h-4 drop-shadow" />
-                </div>
-              </label>
-              <div>
-                <div className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                  <span>Custom Workshop Hex Accent</span>
-                  {accent === 'custom' && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white">
-                      Active
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                  Pick any custom color for your shop branding
+                  <Palette className="w-4 h-4 text-white drop-shadow" />
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <input
-                type="text"
-                value={customHexInput}
-                onChange={(e) => setCustomHexInput(e.target.value)}
-                onBlur={() => {
-                  if (/^#([0-9A-F]{3}){1,2}$/i.test(customHexInput)) {
-                    handleCustomColorApply(customHexInput);
-                  }
-                }}
-                placeholder="#2563eb"
-                maxLength={7}
-                className="w-24 px-2.5 py-1.5 text-xs font-mono rounded-lg border border-zinc-300 bg-zinc-50 uppercase text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-              />
-              <button
-                type="button"
-                onClick={() => handleCustomColorApply(customHexInput)}
-                className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-              >
-                Set
-              </button>
+              <div className="flex-1 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={accentHexInput}
+                  onChange={(e) => setAccentHexInput(e.target.value)}
+                  onBlur={() => handleApplyCustomAccent(accentHexInput)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomAccent(accentHexInput)}
+                  placeholder="#d97706"
+                  maxLength={7}
+                  className="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 uppercase text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleApplyCustomAccent(accentHexInput)}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Ambient Accent Glow Switch */}
-          {onToggleAccentGlow && (
-            <div className="p-3.5 bg-white rounded-xl border border-zinc-200 shadow-2xs flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-zinc-900">
-                    Ambient Accent Glow Lighting
-                  </div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">
-                    Adds subtle atmospheric glow to primary workshop action buttons
-                  </div>
+          {/* Quick Starter Swatches */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+              Color Inspiration Shortcuts
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {QUICK_CUSTOM_SWATCHES.map((swatch) => {
+                const isSelected = customAccentColor.toLowerCase() === swatch.hex.toLowerCase();
+                return (
+                  <button
+                    key={swatch.hex}
+                    type="button"
+                    onClick={() => handleApplyCustomAccent(swatch.hex)}
+                    className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 ring-1 ring-zinc-900/15 font-bold shadow-2xs'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/15 shadow-2xs"
+                      style={{ backgroundColor: swatch.hex }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[11px] text-zinc-900 dark:text-zinc-200 block truncate">{swatch.name}</span>
+                      <span className="text-[9px] font-mono text-zinc-400 block truncate">{swatch.hex}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ambient Accent Glow Toggle */}
+          <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Ambient Accent Lighting Glow
+              </div>
+              <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Radiates a soft matching neon aura behind buttons and active tabs
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onToggleAccentGlow?.(!accentGlow)}
+              className={`w-10 h-5.5 rounded-full transition-colors relative cursor-pointer ${
+                accentGlow ? 'bg-zinc-900 dark:bg-amber-600' : 'bg-zinc-200 dark:bg-zinc-700'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-transform shadow-xs ${
+                  accentGlow ? 'right-0.5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* COLUMN 2: WORKSPACE CANVAS & CONTAINER WIDTH */}
+        <div className="space-y-4 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+              <Grid className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                2. Workspace Canvas & Layout
+              </h4>
+            </div>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 capitalize">
+              {backgroundStyle}
+            </span>
+          </div>
+
+          {/* Background Canvas Patterns (6 Custom Patterns) */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+              Canvas Pattern Style ({WORKSPACE_PATTERNS.length} Options)
+            </label>
+            <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+              {WORKSPACE_PATTERNS.map((pattern) => {
+                const isActive = backgroundStyle === pattern.id;
+                return (
+                  <button
+                    key={pattern.id}
+                    type="button"
+                    onClick={() => onChangeBackgroundStyle?.(pattern.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isActive
+                        ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 ring-2 ring-zinc-900/15 dark:ring-zinc-400/20 shadow-xs'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{pattern.name}</span>
+                      {isActive && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1">{pattern.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* App Container Width */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+              Workbench Container Width
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {LAYOUT_WIDTH_OPTIONS.map((wOpt) => {
+                const isWidthActive = layoutWidth === wOpt.id;
+                return (
+                  <button
+                    key={wOpt.id}
+                    type="button"
+                    onClick={() => onChangeLayoutWidth?.(wOpt.id)}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      isWidthActive
+                        ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 ring-1 ring-zinc-900/15 font-bold shadow-2xs'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 block truncate">{wOpt.name}</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">{wOpt.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMN 3: MENU BAR & SURFACE FINISH */}
+        <div className="space-y-4 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+              <PanelLeft className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+                3. Menu Bar & Surface
+              </h4>
+            </div>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 capitalize">
+              {menuBarStyle}
+            </span>
+          </div>
+
+          {/* Surface Finishes (8 Options) */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+              Menu Bar Surface Style ({MENU_BAR_STYLE_OPTIONS.length} Finishes)
+            </label>
+            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+              {MENU_BAR_STYLE_OPTIONS.map((styleOpt) => {
+                const isStyleActive = menuBarStyle === styleOpt.id;
+                return (
+                  <button
+                    key={styleOpt.id}
+                    type="button"
+                    onClick={() => onChangeMenuBarStyle?.(styleOpt.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isStyleActive
+                        ? 'border-zinc-900 dark:border-zinc-400 bg-zinc-50 dark:bg-zinc-800 ring-2 ring-zinc-900/15 dark:ring-zinc-400/20 shadow-xs'
+                        : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{styleOpt.name}</span>
+                      {isStyleActive && <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-400 line-clamp-1">{styleOpt.tagline}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Menu Bar Swatches */}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center justify-between">
+              <span>Color Inspiration</span>
+              <span className="font-mono text-[10px] text-zinc-400">{menuBarCustomColor}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {QUICK_MENU_BAR_SWATCHES.map((sw) => {
+                const isSel = menuBarCustomColor.toLowerCase() === sw.hex.toLowerCase();
+                return (
+                  <button
+                    key={sw.hex}
+                    type="button"
+                    onClick={() => handleApplyCustomMenuBar(sw.hex)}
+                    className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left cursor-pointer transition-all ${
+                      isSel
+                        ? 'border-zinc-900 dark:border-zinc-300 bg-zinc-50 dark:bg-zinc-800 font-bold shadow-2xs'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                    title={sw.name}
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
+                      style={{ backgroundColor: sw.hex }}
+                    />
+                    <span className="text-[10px] truncate text-zinc-800 dark:text-zinc-200">{sw.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom Menu Bar Color Picker */}
+          <div className="p-3.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Menu Bar Custom Hex
+              </label>
+              <span className="text-[11px] font-mono text-zinc-400">{menuBarCustomColor}</span>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <input
+                  type="color"
+                  value={menuBarCustomColor}
+                  onChange={(e) => handleApplyCustomMenuBar(e.target.value)}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                />
+                <div
+                  className="w-10 h-10 rounded-xl border border-black/20 shadow-sm flex items-center justify-center transition-transform hover:scale-105 cursor-pointer"
+                  style={{ backgroundColor: menuBarCustomColor }}
+                >
+                  <PanelLeft className="w-4 h-4 text-white drop-shadow" />
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => onToggleAccentGlow(!accentGlow)}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
-                  accentGlow ? 'bg-zinc-900' : 'bg-zinc-200'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-xs ${
-                    accentGlow ? 'right-1' : 'left-1'
-                  }`}
+              <div className="flex-1 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={menuBarHexInput}
+                  onChange={(e) => setMenuBarHexInput(e.target.value)}
+                  onBlur={() => handleApplyCustomMenuBar(menuBarHexInput)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomMenuBar(menuBarHexInput)}
+                  placeholder="#0d0f17"
+                  maxLength={7}
+                  className="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 uppercase text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-zinc-900"
                 />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyCustomMenuBar(menuBarHexInput)}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Sync Header Bar Toggle */}
+          <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Sync Top Header Bar
+              </div>
+              <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Apply menu bar color and finish to the top navigation header
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onChangeMenuBarHeaderSync?.(!menuBarHeaderSync)}
+              className={`w-10 h-5.5 rounded-full transition-colors relative cursor-pointer ${
+                menuBarHeaderSync ? 'bg-zinc-900 dark:bg-amber-600' : 'bg-zinc-200 dark:bg-zinc-700'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-transform shadow-xs ${
+                  menuBarHeaderSync ? 'right-0.5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. SMOOTHNESS & SHARPNESS ENGINE CONTROLS */}
+      <SmoothnessSharpnessPanel
+        smoothness={smoothness}
+        sharpness={sharpness}
+        thermalSharpness={thermalSharpness}
+        onChangeSmoothness={onChangeSmoothness || (() => {})}
+        onChangeSharpness={onChangeSharpness || (() => {})}
+        onChangeThermalSharpness={onChangeThermalSharpness}
+      />
+
+      {/* LIVE INTERACTIVE THEME PREVIEW CARD */}
+      <div className="p-5 rounded-2xl bg-zinc-900 text-white shadow-xl border border-zinc-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-zinc-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+              Live Theme Architecture Preview
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-400">
+            Accent: {customAccentColor} • Canvas: {backgroundStyle} • Menu: {menuBarCustomColor} ({menuBarStyle})
+          </span>
+        </div>
+
+        <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 flex flex-wrap items-center gap-3">
+          {/* Custom Accent Button */}
+          <button
+            type="button"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-transform shadow-md cursor-pointer"
+            style={{
+              backgroundColor: customAccentColor,
+              boxShadow: accentGlow ? `0 0 16px ${customAccentColor}66` : undefined,
+            }}
+          >
+            Custom Brand Action
+          </button>
+
+          {/* Custom Badge */}
+          <span
+            className="px-2.5 py-1 rounded-full text-[11px] font-bold border"
+            style={{
+              backgroundColor: `${customAccentColor}22`,
+              borderColor: `${customAccentColor}55`,
+              color: '#ffffff',
+            }}
+          >
+            Active Badge
+          </span>
+
+          {/* Custom Menu Bar Preview Swatch */}
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium"
+            style={{
+              backgroundColor: menuBarCustomColor,
+              borderColor: `${customAccentColor}66`,
+            }}
+          >
+            <PanelLeft className="w-3.5 h-3.5" style={{ color: customAccentColor }} />
+            <span>Menu Bar Surface</span>
+          </div>
+
+          <span className="text-xs text-zinc-400 ml-auto hidden sm:inline">
+            Mode: {isWarmSandMode ? 'Warm Sand & Parchment' : isOledMode ? 'OLED Pitch Black' : isDarkMode ? 'Dark' : 'Light'} • Width: {layoutWidth}
+          </span>
         </div>
       </div>
     </div>

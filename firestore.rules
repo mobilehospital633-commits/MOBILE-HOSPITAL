@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Health check / connection verification document
+    match /test/{testDocId} {
+      allow get: if isValidId(testDocId);
+      allow list: if true;
+      allow write: if isValidId(testDocId);
+    }
+
+    // Repair and sales orders collection
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId);
+      allow list: if true;
+      allow create, update: if isValidId(orderId)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.cost is number
+        && request.resource.data.deposit is number;
+      allow delete: if isValidId(orderId);
+    }
+
+    // Inventory items collection
+    match /inventory/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create, update: if isValidId(itemId)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 150
+        && request.resource.data.qty is number;
+      allow delete: if isValidId(itemId);
+    }
+
+    // Accounting ledger transactions collection
+    match /transactions/{transactionId} {
+      allow get: if isValidId(transactionId);
+      allow list: if true;
+      allow create, update: if isValidId(transactionId)
+        && request.resource.data.category is string
+        && request.resource.data.category.size() <= 100
+        && request.resource.data.amount is number;
+      allow delete: if isValidId(transactionId);
+    }
+
+    // Store settings and profile documents
+    match /settings/{configDocId} {
+      allow get: if isValidId(configDocId);
+      allow list: if true;
+      allow create, update: if isValidId(configDocId)
+        && request.resource.data.shopName is string
+        && request.resource.data.shopName.size() <= 200;
+      allow delete: if isValidId(configDocId);
+    }
+
+    // Connected devices & owner permissions collection
+    match /devices/{deviceId} {
+      allow get: if isValidId(deviceId);
+      allow list: if true;
+      allow create, update: if isValidId(deviceId)
+        && request.resource.data.deviceName is string
+        && request.resource.data.deviceName.size() > 0
+        && request.resource.data.deviceName.size() <= 100
+        && request.resource.data.status is string
+        && request.resource.data.status.size() <= 40;
+      allow delete: if isValidId(deviceId);
+    }
+
+    // Registered users and account authentication status collection
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+      allow create, update: if isValidId(userId)
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0
+        && request.resource.data.username.size() <= 100
+        && request.resource.data.status is string
+        && request.resource.data.status.size() <= 40;
+      allow delete: if isValidId(userId);
+    }
+  }
+}

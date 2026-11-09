@@ -1,562 +1,375 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue } from 'react';
 import {
-  Boxes,
-  Plus,
-  Trash2,
   Package,
+  Plus,
   Search,
   Filter,
-  RotateCcw,
-  Download,
+  ArrowUpDown,
+  Edit3,
+  Trash2,
   AlertTriangle,
-  TrendingUp,
-  Smartphone,
-  Headphones,
-  ShieldCheck,
+  CheckCircle2,
+  Printer,
+  Sparkles,
+  Tag,
+  DollarSign,
   Layers,
-  Battery,
-  Zap,
-  Camera,
-  Volume2,
-  Cpu,
-  Wrench,
-  Minus,
-  Edit2,
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Check,
   X,
-  Tag,
-  Sparkles,
-  SmartphoneNfc,
-  Laptop,
+  RotateCcw,
+  Barcode,
+  TrendingUp,
+  Boxes,
+  Star,
+  Download,
 } from 'lucide-react';
-import { InventoryItem, PartCategory } from '../types';
-import { BRAND_MODELS_DATA, ALL_BRANDS, getModelsForBrand } from '../brandModels';
+import { InventoryItem, PartCategory, ShopProfile, UserRole } from '../types';
+
+export const INVENTORY_CATEGORIES: PartCategory[] = [
+  'Screens & Displays',
+  'Batteries',
+  'Charging Ports & Flex',
+  'Cameras & Lenses',
+  'Speakers & Earpiece',
+  'Housings & Frames',
+  'Motherboard & ICs',
+  'Tempered Glass',
+  'Cases & Covers',
+  'Audio & Headphones',
+  'Buttons & Sensors',
+  'Workshop Consumables',
+  'General Spares',
+];
+
+export const POPULAR_INVENTORY_BRANDS = [
+  'Apple',
+  'Samsung',
+  'Xiaomi',
+  'Vivo',
+  'Oppo',
+  'Realme',
+  'OnePlus',
+  'Motorola',
+  'Google Pixel',
+  'Infinix',
+  'Tecno',
+  'Generic / Universal',
+];
 
 interface InventoryTabProps {
   inventory: InventoryItem[];
-  currency?: string;
-  onAddItem: (item: InventoryItem) => void;
-  onUpdateItem?: (item: InventoryItem) => void;
-  onDeleteItem: (id: string) => void;
-  onAdjustStock?: (id: string, delta: number) => void;
+  profile: ShopProfile;
+  userRole?: UserRole;
+  onAddInventory: (item: InventoryItem) => void;
+  onUpdateInventory: (item: InventoryItem) => void;
+  onDeleteInventory: (id: string) => void;
+  onAdjustStock: (id: string, delta: number) => void;
   onResetCatalog?: () => void;
 }
 
-const CATEGORIES: { name: PartCategory; icon: React.ElementType }[] = [
-  { name: 'Screens & Displays', icon: Smartphone },
-  { name: 'Tempered Glass', icon: ShieldCheck },
-  { name: 'Cases & Covers', icon: Layers },
-  { name: 'Audio & Headphones', icon: Headphones },
-  { name: 'Batteries', icon: Battery },
-  { name: 'Charging Ports & Flex', icon: Zap },
-  { name: 'Cameras & Lenses', icon: Camera },
-  { name: 'Speakers & Earpiece', icon: Volume2 },
-  { name: 'Housings & Frames', icon: SmartphoneNfc },
-  { name: 'Motherboard & ICs', icon: Cpu },
-  { name: 'Buttons & Sensors', icon: Wrench },
-  { name: 'Workshop Consumables', icon: Laptop },
-  { name: 'General Spares', icon: Package },
-];
-
-const CATEGORY_PART_SUGGESTIONS: Record<string, string[]> = {
-  'Screens & Displays': [
-    'Super Retina XDR OLED Display Assembly',
-    'Dynamic AMOLED 2X Display + Frame',
-    '120Hz Curved AMOLED Screen Assembly',
-    'Incell High-Brightness Display Assembly',
-  ],
-  'Tempered Glass': [
-    '9D Edge-to-Edge ESD Dust-Proof Glass',
-    '11D Full Glue HD Clear Tempered Glass',
-    '180° Anti-Spy Privacy Tempered Glass',
-    'UV Liquid Optical Curved Screen Glass',
-    'Sapphire Camera Lens Metal Ring Protectors',
-  ],
-  'Cases & Covers': [
-    'MagSafe Frosted Matte Armor Bumper Case',
-    'Liquid Silicone Case with Microfiber Lining',
-    'Military Grade Kickstand Shockproof Armor',
-    'Luxury Vegan Leather Back Cover',
-    'Clear Anti-Yellowing Air-Cushioned Case',
-  ],
-  'Audio & Headphones': [
-    'True Wireless Earbuds (TWS)',
-    'Active Noise Cancelling Bluetooth Earbuds',
-    'Magnetic Bluetooth Wireless Neckband',
-    'Over-Ear Wireless Stereo Headphone',
-    'Type-C Hi-Fi In-Ear Wired Earphones',
-    '3.5mm Jack Wired Earphones with Mic',
-  ],
-  'Batteries': [
-    'Original Spec High-Capacity Battery Pack',
-    '5000mAh Replacement Battery with TI-Gas Gauge',
-    'SUPERVOOC Dual-Cell Fast Charge Battery',
-  ],
-  'Charging Ports & Flex': [
-    'Type-C Fast Charging Sub-Board with Mic',
-    'Lightning Dock Connector Flex with Dual Mic',
-    'Universal Type-C Female Charging Jack Connectors',
-  ],
-  'Cameras & Lenses': [
-    'Main Rear OIS Primary Camera Sensor Module',
-    'Front Face ID TrueDepth Camera Flex Assembly',
-    'Periscope Optical Zoom Telephoto Module',
-    'Rear Outer Camera Glass Lens with Adhesive',
-  ],
-  'Speakers & Earpiece': [
-    'Bottom Loudspeaker Ringer Buzzer Audio Module',
-    'Top Earpiece Ear Speaker with Proximity Sensor Flex',
-  ],
-  'Housings & Frames': [
-    'Titanium Middle Frame Chassis & Back Glass',
-    'Rear Glass Battery Door Cover with Camera Bezel',
-    'Corning Gorilla Armor Housing Back Panel',
-  ],
-  'Motherboard & ICs': [
-    'USB Charging Controller IC Chip (Tristar/Hydra)',
-    'Power Management IC (PMIC)',
-    'RF Cellular Network Transceiver IC',
-    'High-Precision BGA Reballing Stencils Set',
-  ],
-  'Buttons & Sensors': [
-    'Power Key & Volume Buttons Flex Assembly',
-    'Ultrasonic In-Display Biometric Fingerprint Sensor',
-    'Taptic Engine Linear Resonant Vibrator Motor',
-  ],
-  'Workshop Consumables': [
-    'B-7000 Multi-Purpose Waterproof Display Glue',
-    'T-7000 Black Industrial Screen Frame Glue',
-    'Display Waterproof Adhesive Seal Gaskets',
-    'Battery Easy-Pull Stretch Adhesive Strips',
-    'High Thermal Conductivity Heatsink Paste',
-  ],
-};
-
 export const InventoryTab: React.FC<InventoryTabProps> = ({
   inventory,
-  currency = '₹',
-  onAddItem,
-  onUpdateItem,
-  onDeleteItem,
+  profile,
+  userRole = 'owner',
+  onAddInventory,
+  onUpdateInventory,
+  onDeleteInventory,
   onAdjustStock,
   onResetCatalog,
 }) => {
+  const curr = profile.currency || '₹';
+
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedBrand, setSelectedBrand] = useState<string>('all');
-  const [selectedModel, setSelectedModel] = useState<string>('all');
-  const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'low' | 'instock' | 'out'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'brand' | 'model' | 'stock-asc' | 'stock-desc' | 'price-desc' | 'price-asc'>('name');
+  const deferredSearch = useDeferredValue(searchTerm);
 
-  // Form toggling & editing
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'custom' | 'low-stock' | 'in-stock'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<'custom-first' | 'name-asc' | 'qty-asc' | 'qty-desc' | 'price-desc' | 'margin-desc'>('custom-first');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+
+  // Modal State for Add / Edit
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   // Form Fields
-  const [category, setCategory] = useState<string>('Screens & Displays');
-  const [brand, setBrand] = useState<string>('Apple');
-  const [model, setModel] = useState<string>('');
-  const [name, setName] = useState<string>('');
-  const [sku, setSku] = useState<string>('');
-  const [qty, setQty] = useState<string>('5');
-  const [costPrice, setCostPrice] = useState<string>('');
-  const [salePrice, setSalePrice] = useState<string>('');
-  const [minStock, setMinStock] = useState<string>('2');
+  const [formName, setFormName] = useState('');
+  const [formBrand, setFormBrand] = useState('Apple');
+  const [formCustomBrand, setFormCustomBrand] = useState('');
+  const [formModel, setFormModel] = useState('');
+  const [formCategory, setFormCategory] = useState<string>('Screens & Displays');
+  const [formCustomCategory, setFormCustomCategory] = useState('');
+  const [formSku, setFormSku] = useState('');
+  const [formQty, setFormQty] = useState('5');
+  const [formMinStock, setFormMinStock] = useState('2');
+  const [formCostPrice, setFormCostPrice] = useState('0');
+  const [formSalePrice, setFormSalePrice] = useState('0');
+  const [formLocation, setFormLocation] = useState('');
+  const [formNotes, setFormNotes] = useState('');
+  const [formError, setFormError] = useState('');
 
-  // Custom Added Options: Categories
-  const [customCategories, setCustomCategories] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('mh_custom_inventory_categories');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [showAddCustomCategory, setShowAddCustomCategory] = useState(false);
-  const [newCustomCategoryInput, setNewCustomCategoryInput] = useState('');
+  // Delete confirmation
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copiedSku, setCopiedSku] = useState<string | null>(null);
 
-  const handleAddCustomCategory = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = newCustomCategoryInput.trim();
-    if (!trimmed) return;
-    if (!customCategories.includes(trimmed) && !CATEGORIES.some((c) => c.name === trimmed)) {
-      const updated = [...customCategories, trimmed];
-      setCustomCategories(updated);
-      try {
-        localStorage.setItem('mh_custom_inventory_categories', JSON.stringify(updated));
-      } catch {}
-    }
-    setCategory(trimmed);
-    setNewCustomCategoryInput('');
-    setShowAddCustomCategory(false);
+  // Reset confirmation modal
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [barcodeLabelItem, setBarcodeLabelItem] = useState<InventoryItem | null>(null);
+
+  // Open modal for Adding new Custom item
+  const handleOpenAddModal = () => {
+    setEditingItem(null);
+    setFormName('');
+    setFormBrand('Apple');
+    setFormCustomBrand('');
+    setFormModel('');
+    setFormCategory('Screens & Displays');
+    setFormCustomCategory('');
+    // Auto-generate clean custom SKU
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    setFormSku(`INV-CUST-${randomCode}`);
+    setFormQty('5');
+    setFormMinStock('2');
+    setFormCostPrice('');
+    setFormSalePrice('');
+    setFormLocation('');
+    setFormNotes('');
+    setFormError('');
+    setIsModalOpen(true);
   };
 
-  // Custom Added Options: Brands
-  const [customBrands, setCustomBrands] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('mh_custom_inventory_brands');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [showAddCustomBrand, setShowAddCustomBrand] = useState(false);
-  const [newCustomBrandInput, setNewCustomBrandInput] = useState('');
-
-  const handleAddCustomBrand = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = newCustomBrandInput.trim();
-    if (!trimmed) return;
-    if (!customBrands.includes(trimmed) && !ALL_BRANDS.includes(trimmed)) {
-      const updated = [...customBrands, trimmed];
-      setCustomBrands(updated);
-      try {
-        localStorage.setItem('mh_custom_inventory_brands', JSON.stringify(updated));
-      } catch {}
-    }
-    setBrand(trimmed);
-    setNewCustomBrandInput('');
-    setShowAddCustomBrand(false);
-  };
-
-  // Custom Added Options: Part description suggestions per category
-  const [customPartSuggestions, setCustomPartSuggestions] = useState<Record<string, string[]>>(() => {
-    try {
-      const saved = localStorage.getItem('mh_custom_part_suggestions');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [showAddCustomPartSuggestion, setShowAddCustomPartSuggestion] = useState(false);
-  const [newCustomPartSuggestionInput, setNewCustomPartSuggestionInput] = useState('');
-
-  const handleAddCustomPartSuggestion = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = newCustomPartSuggestionInput.trim();
-    if (!trimmed) return;
-    const currentList = customPartSuggestions[category] || [];
-    if (!currentList.includes(trimmed)) {
-      const updated = {
-        ...customPartSuggestions,
-        [category]: [...currentList, trimmed],
-      };
-      setCustomPartSuggestions(updated);
-      try {
-        localStorage.setItem('mh_custom_part_suggestions', JSON.stringify(updated));
-      } catch {}
-    }
-    setName(trimmed);
-    setNewCustomPartSuggestionInput('');
-    setShowAddCustomPartSuggestion(false);
-  };
-
-  const handleRemoveCustomPartSuggestion = (cat: string, sugToRemove: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const currentList = customPartSuggestions[cat] || [];
-    const updatedList = currentList.filter((s) => s !== sugToRemove);
-    const updated = {
-      ...customPartSuggestions,
-      [cat]: updatedList,
-    };
-    setCustomPartSuggestions(updated);
-    try {
-      localStorage.setItem('mh_custom_part_suggestions', JSON.stringify(updated));
-    } catch {}
-  };
-
-  // Brands list dynamically from database + brand models registry + custom brands
-  const availableBrands = useMemo(() => {
-    const brandsSet = new Set<string>(ALL_BRANDS);
-    customBrands.forEach((b) => brandsSet.add(b));
-    inventory.forEach((item) => {
-      if (item.brand && item.brand.trim()) {
-        brandsSet.add(item.brand.trim());
-      }
-    });
-    return Array.from(brandsSet).sort();
-  }, [inventory, customBrands]);
-
-  // Models list dynamically based on selectedBrand filter
-  const filterAvailableModels = useMemo(() => {
-    const modelsSet = new Set<string>();
-    if (selectedBrand !== 'all') {
-      const predefined = getModelsForBrand(selectedBrand);
-      predefined.forEach((m) => modelsSet.add(m));
-      inventory.forEach((item) => {
-        if (item.brand?.toLowerCase() === selectedBrand.toLowerCase() && item.model?.trim()) {
-          modelsSet.add(item.model.trim());
-        }
-      });
+  // Open modal for Editing an item
+  const handleOpenEditModal = (item: InventoryItem) => {
+    setEditingItem(item);
+    setFormName(item.name);
+    if (POPULAR_INVENTORY_BRANDS.includes(item.brand || '')) {
+      setFormBrand(item.brand || 'Apple');
+      setFormCustomBrand('');
     } else {
-      inventory.forEach((item) => {
-        if (item.model?.trim()) {
-          modelsSet.add(item.model.trim());
-        }
-      });
+      setFormBrand('Other');
+      setFormCustomBrand(item.brand || '');
     }
-    return Array.from(modelsSet).sort();
-  }, [inventory, selectedBrand]);
+    setFormModel(item.model || '');
+    if (INVENTORY_CATEGORIES.includes(item.category as any)) {
+      setFormCategory(item.category || 'Screens & Displays');
+      setFormCustomCategory('');
+    } else {
+      setFormCategory('Other');
+      setFormCustomCategory(item.category || '');
+    }
+    setFormSku(item.sku || '');
+    setFormQty(String(item.qty || 0));
+    setFormMinStock(String(item.minStock || 2));
+    setFormCostPrice(item.costPrice !== undefined ? String(item.costPrice) : '');
+    setFormSalePrice(item.salePrice !== undefined ? String(item.salePrice) : '');
+    setFormLocation(item.location || '');
+    setFormNotes(item.notes || '');
+    setFormError('');
+    setIsModalOpen(true);
+  };
 
-  // Models list for Form when user selects a brand in the form
-  const formBrandModels = useMemo(() => {
-    if (!brand) return [];
-    const models = getModelsForBrand(brand);
-    if (models.length > 0) return models;
-    // Fallback: check if inventory has models for this brand
-    const inInv = new Set<string>();
-    inventory.forEach((i) => {
-      if (i.brand?.toLowerCase() === brand.toLowerCase() && i.model) {
-        inInv.add(i.model);
-      }
-    });
-    return Array.from(inInv);
-  }, [brand, inventory]);
+  // Form Submit (Create or Update)
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) {
+      setFormError('Item / Part Name is required.');
+      return;
+    }
 
-  // Overall Inventory Analytics
-  const stats = useMemo(() => {
-    const totalItems = inventory.length;
-    let totalUnits = 0;
-    let totalCostValuation = 0;
-    let totalRetailValuation = 0;
-    let lowStockCount = 0;
-    let outOfStockCount = 0;
+    const finalBrand = formBrand === 'Other' ? formCustomBrand.trim() || 'Generic' : formBrand;
+    const finalCategory = formCategory === 'Other' ? formCustomCategory.trim() || 'General Spares' : formCategory;
+    const finalSku = formSku.trim() || `INV-${Date.now().toString().slice(-6)}`;
+    const numQty = Math.max(0, parseInt(formQty) || 0);
+    const numMin = Math.max(0, parseInt(formMinStock) || 2);
+    const numCost = Math.max(0, parseFloat(formCostPrice) || 0);
+    const numSale = Math.max(0, parseFloat(formSalePrice) || 0);
 
-    inventory.forEach((item) => {
-      const q = item.qty || 0;
-      totalUnits += q;
-      const cost = item.costPrice || 0;
-      const sale = item.salePrice || 0;
-      totalCostValuation += cost * q;
-      totalRetailValuation += sale * q;
+    if (editingItem) {
+      // Update
+      const updated: InventoryItem = {
+        ...editingItem,
+        name: formName.trim(),
+        brand: finalBrand,
+        model: formModel.trim() || undefined,
+        category: finalCategory,
+        sku: finalSku,
+        qty: numQty,
+        minStock: numMin,
+        costPrice: numCost,
+        salePrice: numSale,
+        location: formLocation.trim() || undefined,
+        notes: formNotes.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+      };
+      onUpdateInventory(updated);
+    } else {
+      // New Custom Item
+      const newItem: InventoryItem = {
+        id: `INV-CUST-${Date.now()}`,
+        name: formName.trim(),
+        brand: finalBrand,
+        model: formModel.trim() || undefined,
+        category: finalCategory,
+        sku: finalSku,
+        qty: numQty,
+        minStock: numMin,
+        costPrice: numCost,
+        salePrice: numSale,
+        isCustom: true,
+        location: formLocation.trim() || undefined,
+        notes: formNotes.trim() || undefined,
+        createdAt: new Date().toISOString(),
+      };
+      onAddInventory(newItem);
+    }
 
-      const threshold = item.minStock !== undefined ? item.minStock : 2;
-      if (q === 0) {
-        outOfStockCount++;
-        lowStockCount++;
-      } else if (q <= threshold) {
-        lowStockCount++;
-      }
-    });
+    setIsModalOpen(false);
+  };
 
-    return {
-      totalItems,
-      totalUnits,
-      totalCostValuation,
-      totalRetailValuation,
-      lowStockCount,
-      outOfStockCount,
-    };
+  // Aggregate stats
+  const customItemsCount = useMemo(() => {
+    return inventory.filter((item) => item.isCustom).length;
   }, [inventory]);
 
-  // Filtered & Sorted items
-  const filteredItems = useMemo(() => {
+  const totalStockUnits = useMemo(() => {
+    return inventory.reduce((sum, item) => sum + (item.qty || 0), 0);
+  }, [inventory]);
+
+  const totalInventoryCostValue = useMemo(() => {
+    return inventory.reduce((sum, item) => sum + ((item.costPrice || 0) * (item.qty || 0)), 0);
+  }, [inventory]);
+
+  const totalInventoryRetailValue = useMemo(() => {
+    return inventory.reduce((sum, item) => sum + ((item.salePrice || item.costPrice || 0) * (item.qty || 0)), 0);
+  }, [inventory]);
+
+  const lowStockCount = useMemo(() => {
+    return inventory.filter((item) => (item.qty || 0) <= (item.minStock || 2)).length;
+  }, [inventory]);
+
+  // Filtered Inventory
+  const filteredInventory = useMemo(() => {
     return inventory
       .filter((item) => {
-        // Search filter across Category, Brand, Model, Parts Name, SKU
-        if (searchTerm.trim()) {
-          const query = searchTerm.toLowerCase();
-          const matchName = item.name.toLowerCase().includes(query);
-          const matchSku = item.sku.toLowerCase().includes(query);
-          const matchBrand = item.brand ? item.brand.toLowerCase().includes(query) : false;
-          const matchModel = item.model ? item.model.toLowerCase().includes(query) : false;
-          const matchCategory = item.category ? item.category.toLowerCase().includes(query) : false;
-          if (!matchName && !matchSku && !matchBrand && !matchModel && !matchCategory) {
-            return false;
-          }
+        const q = deferredSearch.toLowerCase().trim();
+        const matchesSearch =
+          !q ||
+          item.name.toLowerCase().includes(q) ||
+          (item.brand || '').toLowerCase().includes(q) ||
+          (item.model || '').toLowerCase().includes(q) ||
+          (item.sku || '').toLowerCase().includes(q) ||
+          (item.category || '').toLowerCase().includes(q) ||
+          (item.location || '').toLowerCase().includes(q);
+
+        let matchesTab = true;
+        if (activeFilter === 'custom') {
+          matchesTab = Boolean(item.isCustom);
+        } else if (activeFilter === 'low-stock') {
+          matchesTab = (item.qty || 0) <= (item.minStock || 2);
+        } else if (activeFilter === 'in-stock') {
+          matchesTab = (item.qty || 0) > 0;
         }
 
-        // Category filter
-        if (selectedCategory !== 'all') {
-          if (item.category !== selectedCategory) return false;
+        let matchesCat = true;
+        if (selectedCategory !== 'All') {
+          matchesCat = item.category === selectedCategory;
         }
 
-        // Brand filter
-        if (selectedBrand !== 'all') {
-          if (!item.brand || item.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
+        let matchesBrand = true;
+        if (selectedBrand !== 'All') {
+          matchesBrand = item.brand === selectedBrand;
         }
 
-        // Model filter
-        if (selectedModel !== 'all') {
-          if (!item.model || item.model.toLowerCase() !== selectedModel.toLowerCase()) return false;
-        }
-
-        // Stock status filter
-        const threshold = item.minStock !== undefined ? item.minStock : 2;
-        if (stockStatusFilter === 'low') {
-          if (item.qty > threshold) return false;
-        } else if (stockStatusFilter === 'instock') {
-          if (item.qty <= 0) return false;
-        } else if (stockStatusFilter === 'out') {
-          if (item.qty > 0) return false;
-        }
-
-        return true;
+        return matchesSearch && matchesTab && matchesCat && matchesBrand;
       })
       .sort((a, b) => {
-        if (sortBy === 'name') {
+        if (sortBy === 'custom-first') {
+          if (a.isCustom && !b.isCustom) return -1;
+          if (!a.isCustom && b.isCustom) return 1;
           return a.name.localeCompare(b.name);
-        } else if (sortBy === 'brand') {
-          return (a.brand || '').localeCompare(b.brand || '');
-        } else if (sortBy === 'model') {
-          return (a.model || '').localeCompare(b.model || '');
-        } else if (sortBy === 'stock-asc') {
-          return a.qty - b.qty;
-        } else if (sortBy === 'stock-desc') {
-          return b.qty - a.qty;
-        } else if (sortBy === 'price-desc') {
-          return (b.salePrice || 0) - (a.salePrice || 0);
-        } else if (sortBy === 'price-asc') {
-          return (a.salePrice || 0) - (b.salePrice || 0);
+        }
+        if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+        if (sortBy === 'qty-asc') return (a.qty || 0) - (b.qty || 0);
+        if (sortBy === 'qty-desc') return (b.qty || 0) - (a.qty || 0);
+        if (sortBy === 'price-desc') return (b.salePrice || 0) - (a.salePrice || 0);
+        if (sortBy === 'margin-desc') {
+          const marginA = (a.salePrice || 0) - (a.costPrice || 0);
+          const marginB = (b.salePrice || 0) - (b.costPrice || 0);
+          return marginB - marginA;
         }
         return 0;
       });
-  }, [inventory, searchTerm, selectedCategory, selectedBrand, selectedModel, stockStatusFilter, sortBy]);
+  }, [inventory, deferredSearch, activeFilter, selectedCategory, selectedBrand, sortBy]);
 
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    inventory.forEach((item) => {
-      const cat = item.category || 'General Spares';
-      counts[cat] = (counts[cat] || 0) + 1;
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredSearch, activeFilter, selectedCategory, selectedBrand, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInventory.length / (pageSize === 0 ? (filteredInventory.length || 1) : pageSize)));
+
+  const paginatedInventory = useMemo(() => {
+    if (pageSize === 0) return filteredInventory;
+    const start = (currentPage - 1) * pageSize;
+    return filteredInventory.slice(start, start + pageSize);
+  }, [filteredInventory, currentPage, pageSize]);
+
+  const handleCopySku = (sku: string) => {
+    navigator.clipboard.writeText(sku);
+    setCopiedSku(sku);
+    setTimeout(() => setCopiedSku(null), 2000);
+  };
+
+  const handleExportInventoryCSV = () => {
+    if (inventory.length === 0) return;
+    const headers = [
+      'SKU',
+      'Item Name',
+      'Brand',
+      'Model',
+      'Category',
+      'Quantity In Stock',
+      'Min Stock Alert',
+      'Cost Price',
+      'Sale Price',
+      'Profit Margin',
+      'Location / Bin',
+      'Custom Added',
+      'Notes',
+    ];
+    const rows = inventory.map((item) => {
+      const profit = (item.salePrice || 0) - (item.costPrice || 0);
+      return [
+        `"${item.sku}"`,
+        `"${item.name.replace(/"/g, '""')}"`,
+        `"${(item.brand || '').replace(/"/g, '""')}"`,
+        `"${(item.model || '').replace(/"/g, '""')}"`,
+        `"${(item.category || '').replace(/"/g, '""')}"`,
+        item.qty || 0,
+        item.minStock || 2,
+        item.costPrice || 0,
+        item.salePrice || 0,
+        profit,
+        `"${(item.location || '').replace(/"/g, '""')}"`,
+        item.isCustom ? 'Yes' : 'No',
+        `"${(item.notes || '').replace(/"/g, '""')}"`,
+      ].join(',');
     });
-    return counts;
-  }, [inventory]);
 
-  // Open Edit Form
-  const handleStartEdit = (item: InventoryItem) => {
-    setEditingItemId(item.id);
-    setCategory(item.category || 'Screens & Displays');
-    setBrand(item.brand || 'Apple');
-    setModel(item.model || '');
-    setName(item.name);
-    setSku(item.sku);
-    setQty(item.qty.toString());
-    setCostPrice(item.costPrice ? item.costPrice.toString() : '');
-    setSalePrice(item.salePrice ? item.salePrice.toString() : '');
-    setMinStock(item.minStock !== undefined ? item.minStock.toString() : '2');
-    setIsFormOpen(true);
-  };
-
-  const handleCancelForm = () => {
-    setIsFormOpen(false);
-    setEditingItemId(null);
-    setCategory('Screens & Displays');
-    setBrand('Apple');
-    setModel('');
-    setName('');
-    setSku('');
-    setQty('5');
-    setCostPrice('');
-    setSalePrice('');
-    setMinStock('2');
-  };
-
-  // Auto-generate SKU helper
-  const handleAutoGenerateSku = () => {
-    let catCode = 'PAR';
-    if (category === 'Screens & Displays') catCode = 'SCR';
-    else if (category === 'Tempered Glass') catCode = 'GLS';
-    else if (category === 'Cases & Covers') catCode = 'CAS';
-    else if (category === 'Audio & Headphones') catCode = 'AUD';
-    else if (category === 'Batteries') catCode = 'BAT';
-    else if (category === 'Charging Ports & Flex') catCode = 'CHG';
-    else if (category === 'Cameras & Lenses') catCode = 'CAM';
-    else if (category === 'Speakers & Earpiece') catCode = 'SPK';
-    else if (category === 'Housings & Frames') catCode = 'HOU';
-    else if (category === 'Motherboard & ICs') catCode = 'MIC';
-    else if (category === 'Buttons & Sensors') catCode = 'BTN';
-    else if (category === 'Workshop Consumables') catCode = 'CON';
-
-    const cleanModelCode = (model || brand || 'UNIV')
-      .replace(/iPhone\s*/i, 'IP')
-      .replace(/Galaxy\s*/i, '')
-      .replace(/OnePlus\s*/i, 'OP')
-      .replace(/Redmi\s*Note\s*/i, 'RN')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .substring(0, 8)
-      .toUpperCase();
-
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    setSku(`${catCode}-${cleanModelCode || 'GEN'}-${randomSuffix}`);
-  };
-
-  const handleSubmitForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !sku.trim() || qty === '') return;
-
-    const parsedQty = parseInt(qty, 10) || 0;
-    const parsedCost = costPrice ? parseFloat(costPrice) : undefined;
-    const parsedSale = salePrice ? parseFloat(salePrice) : undefined;
-    const parsedMin = minStock ? parseInt(minStock, 10) : 2;
-
-    if (editingItemId) {
-      if (onUpdateItem) {
-        onUpdateItem({
-          id: editingItemId,
-          name: name.trim(),
-          sku: sku.trim().toUpperCase(),
-          qty: parsedQty,
-          category,
-          brand: brand.trim() || undefined,
-          model: model.trim() || undefined,
-          costPrice: parsedCost,
-          salePrice: parsedSale,
-          minStock: parsedMin,
-        });
-      }
-    } else {
-      const newItem: InventoryItem = {
-        id: 'P-' + Math.floor(1000 + Math.random() * 9000),
-        name: name.trim(),
-        sku: sku.trim().toUpperCase(),
-        qty: parsedQty,
-        category,
-        brand: brand.trim() || undefined,
-        model: model.trim() || undefined,
-        costPrice: parsedCost,
-        salePrice: parsedSale,
-        minStock: parsedMin,
-      };
-      onAddItem(newItem);
-    }
-
-    handleCancelForm();
-  };
-
-  // Stock quick stepper
-  const handleStepStock = (id: string, delta: number) => {
-    if (onAdjustStock) {
-      onAdjustStock(id, delta);
-    } else if (onUpdateItem) {
-      const item = inventory.find((i) => i.id === id);
-      if (item) {
-        onUpdateItem({ ...item, qty: Math.max(0, item.qty + delta) });
-      }
-    }
-  };
-
-  // Export inventory to CSV with separated columns
-  const handleExportCSV = () => {
-    const headers = ['Category', 'Brand', 'Model Info', 'Part Name', 'SKU / Code', 'Stock Qty', 'Cost Price', 'Sale Price', 'Min Stock Alert'];
-    const rows = filteredItems.map((item) => [
-      `"${(item.category || '').replace(/"/g, '""')}"`,
-      `"${(item.brand || '').replace(/"/g, '""')}"`,
-      `"${(item.model || '').replace(/"/g, '""')}"`,
-      `"${(item.name || '').replace(/"/g, '""')}"`,
-      `"${item.sku || ''}"`,
-      item.qty,
-      item.costPrice || '',
-      item.salePrice || '',
-      item.minStock !== undefined ? item.minStock : '',
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Smartphone_Parts_Inventory_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `MH_Inventory_Stock_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -564,978 +377,977 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Analytics Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Total Parts Listed</span>
-            <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-700">
-              <Boxes className="w-4 h-4" />
+      {/* Header & Valuation Bar */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-zinc-200 shadow-2xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-zinc-950 text-white flex items-center justify-center shadow-xs shrink-0">
+              <Package className="w-6 h-6 text-emerald-400" />
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900">{stats.totalItems}</span>
-            <span className="text-xs text-zinc-500 font-medium">unique parts</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Stock On Hand</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-900">{stats.totalUnits.toLocaleString()}</span>
-            <span className="text-xs text-zinc-500 font-medium">units total</span>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setStockStatusFilter(stockStatusFilter === 'low' ? 'all' : 'low')}
-          className={`bg-white p-4 rounded-xl border transition-all cursor-pointer shadow-2xs hover:border-amber-400 ${
-            stockStatusFilter === 'low' ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/20' : 'border-zinc-200'
-          }`}
-          title="Click to toggle low stock filter"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Low Stock Alerts</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-700">{stats.lowStockCount}</span>
-            <span className="text-xs text-zinc-500 font-medium">
-              {stats.outOfStockCount > 0 ? `(${stats.outOfStockCount} zero stock)` : 'needs restock'}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Stock Valuation</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl font-bold text-emerald-700">
-              {currency} {stats.totalRetailValuation.toLocaleString()}
-            </span>
-            <span className="text-[11px] text-zinc-400 hidden sm:inline">Retail Value</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Action Buttons Bar */}
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (isFormOpen && !editingItemId) {
-                handleCancelForm();
-              } else {
-                handleCancelForm();
-                setIsFormOpen(true);
-              }
-            }}
-            className="theme-primary-btn bg-zinc-900 hover:bg-zinc-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-98"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{isFormOpen && !editingItemId ? 'Close Form' : 'Add New Spare Part / Accessory'}</span>
-          </button>
-
-          {onResetCatalog && (
-            <button
-              type="button"
-              onClick={() => {
-                if (
-                  confirm(
-                    'Load Complete Smartphone Parts Catalog? This will populate the master database with 70+ smartphone screens, cases, earbuds, tempered glass, batteries, cameras, and spare parts with separated brand, model, and category fields.'
-                  )
-                ) {
-                  onResetCatalog();
-                }
-              }}
-              title="Restores or initializes the master catalog with all brands & models"
-              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors border border-zinc-200/80 flex items-center gap-1.5 cursor-pointer active:scale-98"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Load Full Smartphone Catalog (All Brands & Models)</span>
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="bg-white hover:bg-zinc-50 text-zinc-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors border border-zinc-200 flex items-center gap-1.5 cursor-pointer active:scale-98 shadow-2xs"
-          >
-            <Download className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Export CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Add / Edit Part Expandable Form */}
-      {isFormOpen && (
-        <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm transition-all animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-2">
-                {editingItemId ? <Edit2 className="w-4 h-4 text-blue-600" /> : <Boxes className="w-4 h-4 text-zinc-900" />}
-                <span>{editingItemId ? 'Edit Spare Part Details' : 'Add New Smartphone Spare Part / Accessory'}</span>
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-zinc-950 tracking-tight">
+                  Inventory & Spare Parts
+                </h2>
+                {customItemsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>{customItemsCount} Custom Added</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Fields are cleanly separated into Category, Brand, Model Info, and Parts Name for precise workshop inventory tracking.
+                Manage mobile displays, batteries, accessories, wholesale cost, and stock alerts
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleCancelForm}
-              className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
-          <form onSubmit={handleSubmitForm} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
-              {/* 1. Category */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-zinc-700">
-                    1. Component Category *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCustomCategory(!showAddCustomCategory)}
-                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
-                  >
-                    <Plus className="w-2.5 h-2.5" />
-                    <span>+ Custom Option</span>
-                  </button>
-                </div>
-
-                {showAddCustomCategory && (
-                  <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Custom category..."
-                        value={newCustomCategoryInput}
-                        onChange={(e) => setNewCustomCategoryInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddCustomCategory();
-                          }
-                        }}
-                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomCategory}
-                        disabled={!newCustomCategoryInput.trim()}
-                        className="px-2 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    if (e.target.value === '__add_custom_category__') {
-                      setShowAddCustomCategory(true);
-                    } else {
-                      setCategory(e.target.value);
-                    }
-                  }}
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors bg-white cursor-pointer"
-                >
-                  <optgroup label="Standard Categories">
-                    {CATEGORIES.map((c) => (
-                      <option key={c.name} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                  {customCategories.length > 0 && (
-                    <optgroup label="Custom Categories">
-                      {customCategories.map((c) => (
-                        <option key={c} value={c}>
-                          ★ {c} (Custom)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  <option value="__add_custom_category__">➕ + Add Custom Category Option...</option>
-                </select>
-              </div>
-
-              {/* 2. Brand */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-zinc-700">
-                    2. Brand Name *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCustomBrand(!showAddCustomBrand)}
-                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
-                  >
-                    <Plus className="w-2.5 h-2.5" />
-                    <span>+ Custom Option</span>
-                  </button>
-                </div>
-
-                {showAddCustomBrand && (
-                  <div className="mb-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Custom brand..."
-                        value={newCustomBrandInput}
-                        onChange={(e) => setNewCustomBrandInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddCustomBrand();
-                          }
-                        }}
-                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomBrand}
-                        disabled={!newCustomBrandInput.trim()}
-                        className="px-2 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <select
-                  value={brand}
-                  onChange={(e) => {
-                    const newBrand = e.target.value;
-                    if (newBrand === '__add_custom_brand__') {
-                      setShowAddCustomBrand(true);
-                      return;
-                    }
-                    setBrand(newBrand);
-                    const brandModels = getModelsForBrand(newBrand);
-                    if (brandModels.length > 0 && !brandModels.includes(model)) {
-                      setModel(brandModels[0]);
-                    }
-                  }}
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors bg-white cursor-pointer"
-                >
-                  {availableBrands.map((b) => (
-                    <option key={b} value={b}>
-                      {customBrands.includes(b) ? `★ ${b} (Custom)` : b}
-                    </option>
-                  ))}
-                  <option value="__add_custom_brand__">➕ + Add Custom Brand Option...</option>
-                </select>
-              </div>
-
-              {/* 3. Model Info */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-zinc-700">
-                    3. Model Info *
-                  </label>
-                  <span className="text-[10px] text-zinc-400">Select or type</span>
-                </div>
-                <input
-                  type="text"
-                  list="form-model-suggestions"
-                  required
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={`e.g. ${formBrandModels[0] || 'iPhone 15 Pro Max'}`}
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-                <datalist id="form-model-suggestions">
-                  {formBrandModels.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-              </div>
-
-              {/* 4. SKU with auto-generate button */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-zinc-700">
-                    SKU / Part Code *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAutoGenerateSku}
-                    className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
-                  >
-                    <Sparkles className="w-2.5 h-2.5" />
-                    <span>Auto-Gen</span>
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  placeholder="e.g. SCR-IP15PM-OLED"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm font-mono text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              </div>
-
-              {/* 5. Parts Name */}
-              <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-zinc-700">
-                    4. Parts Name / Component Description *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCustomPartSuggestion(!showAddCustomPartSuggestion)}
-                    className="text-[10px] text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer inline-flex items-center gap-0.5"
-                  >
-                    <Plus className="w-2.5 h-2.5" />
-                    <span>+ Custom Option</span>
-                  </button>
-                </div>
-
-                {showAddCustomPartSuggestion && (
-                  <div className="mb-2 p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 animate-in fade-in duration-100">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-emerald-800">
-                        Add Custom Part Suggestion for "{category}"
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddCustomPartSuggestion(false)}
-                        className="text-zinc-400 hover:text-zinc-600 p-0.5"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="e.g. 100W GaN Super Charger, Hydrogel Privacy Film..."
-                        value={newCustomPartSuggestionInput}
-                        onChange={(e) => setNewCustomPartSuggestionInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddCustomPartSuggestion();
-                          }
-                        }}
-                        className="flex-1 px-2 py-1 text-xs bg-white border border-emerald-300 rounded focus:outline-none text-zinc-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomPartSuggestion}
-                        disabled={!newCustomPartSuggestionInput.trim()}
-                        className="px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded cursor-pointer shrink-0"
-                      >
-                        Save Option
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Super Retina XDR OLED Display Assembly (120Hz ProMotion)"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-
-                {/* Quick Suggestion Chips for Part Name (Standard + Custom) */}
-                {((CATEGORY_PART_SUGGESTIONS[category] && CATEGORY_PART_SUGGESTIONS[category].length > 0) ||
-                  (customPartSuggestions[category] && customPartSuggestions[category].length > 0)) && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-zinc-400 font-medium mr-1">Quick Suggestions:</span>
-                    
-                    {CATEGORY_PART_SUGGESTIONS[category]?.map((sug) => (
-                      <button
-                        key={sug}
-                        type="button"
-                        onClick={() => setName(sug)}
-                        className="text-[11px] px-2 py-0.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded transition-colors cursor-pointer"
-                      >
-                        {sug}
-                      </button>
-                    ))}
-
-                    {customPartSuggestions[category]?.map((cSug) => (
-                      <div
-                        key={cSug}
-                        className="inline-flex items-center text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setName(cSug)}
-                          className="px-2 py-0.5 hover:bg-emerald-100 rounded-l cursor-pointer"
-                        >
-                          ★ {cSug}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleRemoveCustomPartSuggestion(category, cSug, e)}
-                          className="pr-1.5 pl-0.5 hover:text-rose-600 cursor-pointer"
-                          title="Remove option"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Quantities & Pricing */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Units in Stock *</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value)}
-                  placeholder="Units"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Low Stock Alert Level</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={minStock}
-                  onChange={(e) => setMinStock(e.target.value)}
-                  placeholder="Alert at e.g. 2"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Wholesale Cost ({currency})</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
-                  placeholder="Purchase cost"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Retail Sale Price ({currency})</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={salePrice}
-                  onChange={(e) => setSalePrice(e.target.value)}
-                  placeholder="Selling price"
-                  className="w-full border border-zinc-200 rounded-lg p-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-none transition-colors"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-100">
-              <button
-                type="button"
-                onClick={handleCancelForm}
-                className="px-4 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="theme-primary-btn bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2 rounded-lg font-semibold text-xs transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-98"
-              >
-                <Check className="w-4 h-4" />
-                <span>{editingItemId ? 'Update Part Details' : 'Save Part to Inventory'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Category Navigation Pills */}
-      <div className="bg-white p-3 rounded-xl border border-zinc-200 shadow-2xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'all'
-                ? 'bg-zinc-900 text-white shadow-2xs'
-                : 'bg-zinc-100/80 hover:bg-zinc-200/80 text-zinc-700'
-            }`}
-          >
-            <span>All Categories</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                selectedCategory === 'all' ? 'bg-zinc-800 text-zinc-200' : 'bg-white text-zinc-600 border border-zinc-200'
-              }`}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* ADD CUSTOM INVENTORY ITEM BUTTON */}
+            <button
+              type="button"
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
             >
-              {inventory.length}
-            </span>
-          </button>
+              <Plus className="w-4 h-4" />
+              <span>Add Custom Item</span>
+            </button>
 
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const count = categoryCounts[cat.name] || 0;
-            const isSelected = selectedCategory === cat.name;
+            <button
+              type="button"
+              onClick={handleExportInventoryCSV}
+              className="px-3.5 py-2 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download full inventory catalog as CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Export CSV</span>
+            </button>
 
-            return (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="px-3.5 py-2 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Print Stock Sheet</span>
+            </button>
+
+            {userRole !== 'staff' && onResetCatalog && (
               <button
-                key={cat.name}
                 type="button"
-                onClick={() => setSelectedCategory(isSelected ? 'all' : cat.name)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  isSelected ? 'bg-zinc-900 text-white shadow-2xs' : 'bg-zinc-100/80 hover:bg-zinc-200/80 text-zinc-700'
-                }`}
+                onClick={() => setShowResetConfirm(true)}
+                className="px-3 py-2 rounded-xl border border-zinc-200 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Reset or restore standard catalog"
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{cat.name}</span>
-                {count > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
-                      isSelected ? 'bg-zinc-800 text-zinc-200' : 'bg-white text-zinc-600 border border-zinc-200'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Catalog</span>
               </button>
-            );
-          })}
+            )}
+          </div>
+        </div>
 
-          {/* Custom Added Categories Pills */}
-          {customCategories.map((cName) => {
-            const count = categoryCounts[cName] || 0;
-            const isSelected = selectedCategory === cName;
+        {/* 4 Financial & Stock KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-5 border-t border-zinc-100">
+          <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+                Total Parts Catalog
+              </span>
+              <Boxes className="w-4 h-4 text-zinc-400" />
+            </div>
+            <div className="text-2xl font-black font-mono tabular-nums text-zinc-900 mt-2 tracking-tight">
+              {inventory.length} <span className="text-xs font-normal text-zinc-500 font-sans">Items</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 font-medium mt-1">
+              {totalStockUnits} total units in stock ({customItemsCount} custom)
+            </p>
+          </div>
 
-            return (
-              <button
-                key={cName}
-                type="button"
-                onClick={() => setSelectedCategory(isSelected ? 'all' : cName)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer border ${
-                  isSelected
-                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
-                    : 'bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80'
-                }`}
-              >
-                <Tag className="w-3 h-3 text-emerald-600" />
-                <span>{cName}</span>
-                {count > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
-                      isSelected ? 'bg-emerald-800 text-emerald-100' : 'bg-white text-emerald-700 border border-emerald-200'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                Cost Valuation
+              </span>
+              <span className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                {curr}
+              </span>
+            </div>
+            <div className="text-2xl font-black text-emerald-900 mt-2 tracking-tight font-mono tabular-nums">
+              {curr}{totalInventoryCostValue.toFixed(0)}
+            </div>
+            <p className="text-[11px] text-emerald-700 font-medium mt-1">
+              Wholesale purchasing capital invested
+            </p>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsFormOpen(true);
-              setShowAddCustomCategory(true);
-            }}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-dashed border-emerald-300 flex items-center gap-1 cursor-pointer whitespace-nowrap transition-colors"
-            title="Add a new custom inventory category"
-          >
-            <Plus className="w-3 h-3" />
-            <span>+ Custom Category</span>
-          </button>
+          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">
+                Retail / Selling Value
+              </span>
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="text-2xl font-black text-blue-900 mt-2 tracking-tight font-mono tabular-nums">
+              {curr}{totalInventoryRetailValue.toFixed(0)}
+            </div>
+            <p className="text-[11px] text-blue-700 font-medium mt-1">
+              Est. Profit: +{curr}{(totalInventoryRetailValue - totalInventoryCostValue).toFixed(0)}
+            </p>
+          </div>
+
+          <div className={`p-4 rounded-xl border ${
+            lowStockCount > 0
+              ? 'bg-amber-50/80 border-amber-200/90 text-amber-900'
+              : 'bg-zinc-50 border-zinc-200 text-zinc-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider">
+                Low Stock Alerts
+              </span>
+              <AlertTriangle className={`w-4 h-4 ${lowStockCount > 0 ? 'text-amber-600' : 'text-zinc-400'}`} />
+            </div>
+            <div className="text-2xl font-black font-mono tabular-nums mt-2 tracking-tight">
+              {lowStockCount} <span className="text-xs font-normal font-sans">Need Reorder</span>
+            </div>
+            <p className="text-[11px] font-medium mt-1">
+              {lowStockCount > 0 ? 'Stock at or below minimum threshold' : 'All items sufficiently stocked'}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Separated Filters & Search Toolbar */}
-      <div className="bg-white p-3.5 rounded-xl border border-zinc-200 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Search Input across all fields */}
-          <div className="md:col-span-4 relative">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Filter and Search Controls */}
+      <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-2xs space-y-3">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          {/* Search Box */}
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-2.5 text-zinc-400 w-4 h-4" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search parts name, model, brand, category, SKU..."
-              className="w-full pl-9 pr-8 py-2 text-xs border border-zinc-200 rounded-lg text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors"
+              placeholder="Search by part name, brand, model, SKU barcode, or rack..."
+              className="w-full pl-9 pr-3.5 py-2 text-xs sm:text-sm border border-zinc-200 rounded-xl focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-hidden bg-zinc-50/50 focus:bg-white text-zinc-900"
             />
             {searchTerm && (
               <button
+                type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                className="absolute right-3 top-2.5 text-xs text-zinc-400 hover:text-zinc-600 cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                Clear
               </button>
             )}
           </div>
 
-          {/* Separate Brand Filter */}
-          <div className="md:col-span-2">
+          {/* Quick Segmented Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200/80 overflow-x-auto w-full md:w-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveFilter('all')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                activeFilter === 'all'
+                  ? 'bg-white text-zinc-950 shadow-2xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              All ({inventory.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('custom')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeFilter === 'custom'
+                  ? 'bg-amber-500 text-white shadow-2xs'
+                  : 'text-amber-800 hover:bg-amber-50'
+              }`}
+            >
+              <Star className="w-3 h-3 fill-current" />
+              <span>Custom Added ({customItemsCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('low-stock')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeFilter === 'low-stock'
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'text-rose-700 hover:bg-rose-50'
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              <span>Low Stock ({lowStockCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('in-stock')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                activeFilter === 'in-stock'
+                  ? 'bg-white text-zinc-950 shadow-2xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              In Stock
+            </button>
+          </div>
+        </div>
+
+        {/* Second row filters: Category, Brand & Sorting */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-100 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-400 font-medium">Category:</span>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-white border border-zinc-200 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-800 focus:outline-hidden cursor-pointer"
+            >
+              <option value="All">All Categories</option>
+              {INVENTORY_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-400 font-medium">Brand:</span>
             <select
               value={selectedBrand}
-              onChange={(e) => {
-                setSelectedBrand(e.target.value);
-                setSelectedModel('all'); // Reset model when brand changes
-              }}
-              className="w-full border border-zinc-200 rounded-lg py-2 px-2.5 text-xs text-zinc-800 bg-white focus:outline-none focus:border-zinc-900 cursor-pointer"
+              onChange={(e) => setSelectedBrand(e.target.value)}
+              className="bg-white border border-zinc-200 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-800 focus:outline-hidden cursor-pointer"
             >
-              <option value="all">All Brands ({availableBrands.length})</option>
-              {availableBrands.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
+              <option value="All">All Brands</option>
+              {POPULAR_INVENTORY_BRANDS.map((b) => (
+                <option key={b} value={b}>{b}</option>
               ))}
             </select>
           </div>
 
-          {/* Separate Model Info Filter (populated for chosen brand) */}
-          <div className="md:col-span-3">
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full border border-zinc-200 rounded-lg py-2 px-2.5 text-xs text-zinc-800 bg-white focus:outline-none focus:border-zinc-900 cursor-pointer"
-            >
-              <option value="all">
-                {selectedBrand !== 'all' ? `All ${selectedBrand} Models` : 'All Models (Filter by Device)'}
-              </option>
-              {filterAvailableModels.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Stock Level Filter */}
-          <div className="md:col-span-3 flex items-center gap-2">
-            <select
-              value={stockStatusFilter}
-              onChange={(e) => setStockStatusFilter(e.target.value as any)}
-              className="w-1/2 border border-zinc-200 rounded-lg py-2 px-2 text-xs text-zinc-700 bg-white focus:outline-none focus:border-zinc-900 cursor-pointer"
-            >
-              <option value="all">All Stock</option>
-              <option value="low">Low (&le; 2)</option>
-              <option value="instock">In Stock (&gt; 0)</option>
-              <option value="out">Out of Stock (0)</option>
-            </select>
-
+          <div className="flex items-center gap-1.5 ml-auto">
+            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-1/2 border border-zinc-200 rounded-lg py-2 px-2 text-xs text-zinc-700 bg-white focus:outline-none focus:border-zinc-900 cursor-pointer"
+              className="bg-white border border-zinc-200 rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-800 focus:outline-hidden cursor-pointer"
             >
-              <option value="name">Part Name (A-Z)</option>
-              <option value="brand">Brand</option>
-              <option value="model">Model Info</option>
-              <option value="stock-desc">Stock: High to Low</option>
-              <option value="stock-asc">Stock: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="price-asc">Price: Low to High</option>
+              <option value="custom-first">⭐ Custom Added First</option>
+              <option value="name-asc">Item Name (A-Z)</option>
+              <option value="qty-asc">Stock: Low to High (Alerts First)</option>
+              <option value="qty-desc">Stock: High to Low</option>
+              <option value="price-desc">Sale Price (High to Low)</option>
+              <option value="margin-desc">Profit Margin (Highest First)</option>
             </select>
           </div>
         </div>
-
-        {/* Active Filter Chips */}
-        {(searchTerm || selectedCategory !== 'all' || selectedBrand !== 'all' || selectedModel !== 'all' || stockStatusFilter !== 'all') && (
-          <div className="pt-2 border-t border-zinc-100 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
-            <span className="text-[11px] font-semibold text-zinc-400">Active Filters:</span>
-
-            {selectedCategory !== 'all' && (
-              <span className="inline-flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-full text-zinc-800 text-[11px]">
-                <Tag className="w-2.5 h-2.5 text-zinc-400" />
-                <span>{selectedCategory}</span>
-                <button onClick={() => setSelectedCategory('all')} className="hover:text-rose-600 ml-1">
-                  &times;
-                </button>
-              </span>
-            )}
-
-            {selectedBrand !== 'all' && (
-              <span className="inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full text-blue-800 text-[11px] font-medium border border-blue-200/60">
-                <span>Brand: {selectedBrand}</span>
-                <button
-                  onClick={() => {
-                    setSelectedBrand('all');
-                    setSelectedModel('all');
-                  }}
-                  className="hover:text-rose-600 ml-1"
-                >
-                  &times;
-                </button>
-              </span>
-            )}
-
-            {selectedModel !== 'all' && (
-              <span className="inline-flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-full text-purple-800 text-[11px] font-medium border border-purple-200/60">
-                <Smartphone className="w-2.5 h-2.5 text-purple-600" />
-                <span>Model: {selectedModel}</span>
-                <button onClick={() => setSelectedModel('all')} className="hover:text-rose-600 ml-1">
-                  &times;
-                </button>
-              </span>
-            )}
-
-            {stockStatusFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full text-amber-800 text-[11px] font-medium border border-amber-200/60">
-                <span>Stock: {stockStatusFilter}</span>
-                <button onClick={() => setStockStatusFilter('all')} className="hover:text-rose-600 ml-1">
-                  &times;
-                </button>
-              </span>
-            )}
-
-            {searchTerm && (
-              <span className="inline-flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-full text-zinc-800 text-[11px]">
-                <span>Query: "{searchTerm}"</span>
-                <button onClick={() => setSearchTerm('')} className="hover:text-rose-600 ml-1">
-                  &times;
-                </button>
-              </span>
-            )}
-
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-                setSelectedBrand('all');
-                setSelectedModel('all');
-                setStockStatusFilter('all');
-              }}
-              className="text-[11px] text-rose-600 hover:text-rose-800 font-medium underline ml-auto cursor-pointer"
-            >
-              Reset all filters
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Inventory Table with Separated Columns: Category, Brand, Model Info, Parts Name */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-zinc-100 flex flex-wrap justify-between items-center gap-2 bg-zinc-50/50">
-          <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-zinc-500" />
-            <h3 className="font-semibold text-zinc-800 text-sm">
-              Smartphone Parts Directory
-            </h3>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
-              Showing {filteredItems.length} of {inventory.length} parts
-            </span>
+      {/* Inventory Items List / Table */}
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xs overflow-hidden">
+        {filteredInventory.length === 0 ? (
+          <div className="py-16 px-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-500 flex items-center justify-center mx-auto mb-3">
+              <Package className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-zinc-900">No Inventory Items Found</h3>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto mt-1">
+              No parts or accessories match your filter criteria. Click below to add a new custom inventory item.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenAddModal}
+              className="mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Custom Item</span>
+            </button>
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-zinc-600">
-            <thead className="bg-zinc-50 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-100">
-              <tr>
-                <th className="py-3 px-3.5">Category</th>
-                <th className="py-3 px-3.5">Brand</th>
-                <th className="py-3 px-3.5">Model Info</th>
-                <th className="py-3 px-4">Parts Name & SKU</th>
-                <th className="py-3 px-3.5">Cost / Retail</th>
-                <th className="py-3 px-3.5 text-center">Stock Units</th>
-                <th className="py-3 px-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {filteredItems.length === 0 ? (
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-600">
+              <thead className="bg-zinc-50 text-[11px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-100">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-400 text-xs">
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <Package className="w-8 h-8 text-zinc-300 mx-auto" />
-                      <p className="font-medium text-zinc-600">No matching smartphone parts found.</p>
-                      <p className="text-[11px] text-zinc-400">
-                        Try adjusting your Category, Brand, or Model filters.
-                      </p>
-                      {onResetCatalog && (
-                        <button
-                          type="button"
-                          onClick={onResetCatalog}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-medium cursor-pointer"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Load Full Smartphone Catalog</span>
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <th className="py-3 px-5">Part / Item Details</th>
+                  <th className="py-3 px-5">Brand & Model</th>
+                  <th className="py-3 px-5">Category & Rack</th>
+                  <th className="py-3 px-5">Stock & Stepper</th>
+                  <th className="py-3 px-5">Cost Price</th>
+                  <th className="py-3 px-5">Sale Price & Margin</th>
+                  <th className="py-3 px-5 text-center">Actions</th>
                 </tr>
-              ) : (
-                filteredItems.map((item) => {
-                  const threshold = item.minStock !== undefined ? item.minStock : 2;
-                  const isOut = item.qty === 0;
-                  const isLow = !isOut && item.qty <= threshold;
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {paginatedInventory.map((item) => {
+                  const isLow = (item.qty || 0) <= (item.minStock || 2);
+                  const isOut = (item.qty || 0) === 0;
+                  const profit = (item.salePrice || 0) - (item.costPrice || 0);
+                  const marginPct = item.costPrice && item.costPrice > 0
+                    ? Math.round((profit / item.costPrice) * 100)
+                    : null;
 
                   return (
-                    <tr key={item.id} className="hover:bg-zinc-50/70 transition-colors group">
-                      {/* 1. Category Column */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded-md">
-                          <Tag className="w-3 h-3 text-zinc-400" />
-                          <span>{item.category || 'General'}</span>
-                        </span>
-                      </td>
-
-                      {/* 2. Brand Column */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span
-                          onClick={() => item.brand && setSelectedBrand(item.brand)}
-                          title={`Filter all ${item.brand} parts`}
-                          className="font-bold text-xs text-zinc-900 bg-zinc-100 hover:bg-blue-100 hover:text-blue-800 px-2 py-0.5 rounded transition-colors cursor-pointer"
-                        >
-                          {item.brand || 'Universal'}
-                        </span>
-                      </td>
-
-                      {/* 3. Model Info Column */}
-                      <td className="py-3 px-3.5">
-                        {item.model ? (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-zinc-50/70 transition-colors group"
+                    >
+                      {/* Name & Custom Badge */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <strong className="font-bold text-zinc-950 text-sm">{item.name}</strong>
+                          {item.isCustom && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                              <span>Custom</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 font-mono">
+                          <span>SKU: {item.sku}</span>
                           <button
                             type="button"
-                            onClick={() => setSelectedModel(item.model || 'all')}
-                            title={`Filter all parts for ${item.model}`}
-                            className="inline-flex items-center gap-1 font-semibold text-xs text-zinc-800 hover:text-blue-700 bg-zinc-50 hover:bg-blue-50 border border-zinc-200/80 hover:border-blue-300 px-2 py-0.5 rounded transition-colors cursor-pointer text-left"
+                            onClick={() => handleCopySku(item.sku)}
+                            className="text-[10px] text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                            title="Copy SKU code"
                           >
-                            <Smartphone className="w-3 h-3 text-zinc-400 shrink-0" />
-                            <span>{item.model}</span>
+                            {copiedSku === item.sku ? (
+                              <span className="text-emerald-600 font-bold">Copied!</span>
+                            ) : (
+                              'Copy'
+                            )}
                           </button>
-                        ) : (
-                          <span className="text-[11px] text-zinc-400 italic">Universal Fit</span>
-                        )}
-                      </td>
-
-                      {/* 4. Parts Name & SKU Column */}
-                      <td className="py-3 px-4 max-w-sm">
-                        <div className="font-medium text-zinc-900 text-xs leading-snug">
-                          {item.name}
-                        </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-medium text-zinc-500 bg-zinc-50 px-1.5 py-0.2 rounded border border-zinc-200/60">
-                            {item.sku}
-                          </span>
                         </div>
                       </td>
 
-                      {/* 5. Cost / Retail Pricing */}
-                      <td className="py-3 px-3.5 whitespace-nowrap text-xs">
-                        {item.salePrice ? (
-                          <div>
-                            <div className="font-bold text-zinc-900">
-                              {currency} {item.salePrice.toLocaleString()}
-                            </div>
-                            {item.costPrice ? (
-                              <div className="text-[10px] text-zinc-400">
-                                Cost: {currency} {item.costPrice.toLocaleString()}
-                              </div>
-                            ) : null}
+                      {/* Brand & Compatible Model */}
+                      <td className="py-3.5 px-5">
+                        <div className="font-semibold text-zinc-800 text-xs">{item.brand || 'Generic'}</div>
+                        <div className="text-[11px] text-zinc-500 mt-0.5">
+                          {item.model || 'Universal / All Models'}
+                        </div>
+                      </td>
+
+                      {/* Category & Storage Location */}
+                      <td className="py-3.5 px-5">
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
+                          {item.category || 'General Spares'}
+                        </span>
+                        {item.location && (
+                          <div className="flex items-center gap-1 text-[11px] text-zinc-500 mt-1">
+                            <MapPin className="w-3 h-3 text-zinc-400" />
+                            <span>{item.location}</span>
                           </div>
-                        ) : (
-                          <span className="text-zinc-400 text-[11px]">&mdash;</span>
                         )}
                       </td>
 
-                      {/* 6. Stock Quantity with Steppers */}
-                      <td className="py-3 px-3.5 text-center whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg p-1">
-                          <button
-                            type="button"
-                            onClick={() => handleStepStock(item.id, -1)}
-                            disabled={item.qty <= 0}
-                            title="Deduct 1 unit (used in repair)"
-                            className="w-5 h-5 rounded flex items-center justify-center bg-white hover:bg-zinc-200 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed border border-zinc-200 cursor-pointer active:scale-95"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
+                      {/* Stock Quantity & +/- Stepper */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center border border-zinc-200 rounded-lg bg-zinc-50 overflow-hidden shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => onAdjustStock(item.id, -1)}
+                              disabled={item.qty <= 0}
+                              className="w-7 h-7 flex items-center justify-center hover:bg-zinc-200 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed font-bold cursor-pointer transition-colors"
+                              title="Decrease stock by 1"
+                            >
+                              -
+                            </button>
+                            <span className="w-9 text-center font-mono font-bold text-xs text-zinc-950 tabular-nums">
+                              {item.qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onAdjustStock(item.id, 1)}
+                              className="w-7 h-7 flex items-center justify-center hover:bg-zinc-200 text-zinc-700 font-bold cursor-pointer transition-colors"
+                              title="Increase stock by 1"
+                            >
+                              +
+                            </button>
+                          </div>
 
-                          <span
-                            className={`min-w-8 text-center text-xs font-bold px-1.5 py-0.5 rounded ${
-                              isOut
-                                ? 'bg-rose-100 text-rose-800'
-                                : isLow
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'text-zinc-800'
-                            }`}
-                          >
-                            {item.qty}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() => handleStepStock(item.id, 1)}
-                            title="Add 1 unit (restocked)"
-                            className="w-5 h-5 rounded flex items-center justify-center bg-white hover:bg-zinc-200 text-zinc-600 border border-zinc-200 cursor-pointer active:scale-95"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+                          {/* Status Pill */}
+                          {isOut ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              Out of Stock
+                            </span>
+                          ) : isLow ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              Low ({item.qty})
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              In Stock
+                            </span>
+                          )}
                         </div>
-                        {isOut && <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Out of Stock</div>}
-                        {isLow && !isOut && (
-                          <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Low Stock</div>
+                        <div className="text-[10px] text-zinc-400 mt-1 font-mono">
+                          Min Alert: {item.minStock || 2} units
+                        </div>
+                      </td>
+
+                      {/* Cost Price */}
+                      <td className="py-3.5 px-5 font-mono text-zinc-700 font-medium text-xs tabular-nums">
+                        {curr}{(item.costPrice || 0).toFixed(2)}
+                      </td>
+
+                      {/* Sale Price & Profit Margin */}
+                      <td className="py-3.5 px-5">
+                        <div className="font-mono font-bold text-zinc-950 text-sm tabular-nums">
+                          {curr}{(item.salePrice || 0).toFixed(2)}
+                        </div>
+                        {profit !== 0 && (
+                          <div className={`text-[10px] font-mono font-medium mt-0.5 tabular-nums ${profit > 0 ? 'text-emerald-700' : 'text-zinc-400'}`}>
+                            {profit > 0 ? `+${curr}${profit.toFixed(0)}` : `${curr}${profit.toFixed(0)}`}
+                            {marginPct !== null && ` (${marginPct}%)`}
+                          </div>
                         )}
                       </td>
 
-                      {/* 7. Actions */}
-                      <td className="py-3 px-3 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
+                      {/* Action buttons */}
+                      <td className="py-3.5 px-5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleStartEdit(item)}
-                            title="Edit part details"
-                            className="text-zinc-400 hover:text-zinc-800 p-1 rounded hover:bg-zinc-100 transition-colors cursor-pointer"
+                            onClick={() => setBarcodeLabelItem(item)}
+                            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+                            title="Print Barcode & Shelf Sticker Label"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Barcode className="w-3.5 h-3.5 text-zinc-600" />
                           </button>
+
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`Remove "${item.name}" from inventory?`)) {
-                                onDeleteItem(item.id);
-                              }
-                            }}
-                            title="Delete part from inventory"
-                            className="text-zinc-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                            onClick={() => handleOpenEditModal(item)}
+                            className="p-1.5 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+                            title="Edit Inventory Item"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
+
+                          {userRole !== 'staff' && (
+                            confirmDeleteId === item.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onDeleteInventory(item.id);
+                                    setConfirmDeleteId(null);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
+                                  title="Confirm delete"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="p-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(item.id)}
+                                className="p-1.5 rounded-lg border border-zinc-200 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )
+                          )}
                         </div>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination Toolbar */}
+        {filteredInventory.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5 bg-zinc-50 border-t border-zinc-200 text-xs text-zinc-600">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span>
+                Showing <strong className="font-semibold text-zinc-900 font-mono">{pageSize === 0 ? 1 : Math.min(filteredInventory.length, (currentPage - 1) * pageSize + 1)}</strong> to{' '}
+                <strong className="font-semibold text-zinc-900 font-mono">{pageSize === 0 ? filteredInventory.length : Math.min(filteredInventory.length, currentPage * pageSize)}</strong> of{' '}
+                <strong className="font-semibold text-zinc-900 font-mono">{filteredInventory.length}</strong> items
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-zinc-400 font-medium">Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white border border-zinc-200 rounded-md px-2 py-1 text-xs font-semibold text-zinc-800 shadow-2xs cursor-pointer focus:outline-hidden"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={0}>All</option>
+                </select>
+              </div>
+            </div>
+
+            {pageSize !== 0 && totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed text-zinc-700 transition-colors cursor-pointer"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed text-zinc-700 transition-colors cursor-pointer"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="px-3 py-1 text-xs font-mono font-semibold bg-white border border-zinc-200 rounded-md text-zinc-800 shadow-2xs">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed text-zinc-700 transition-colors cursor-pointer"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed text-zinc-700 transition-colors cursor-pointer"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* ========================================================= */}
+      {/* ADD / EDIT CUSTOM INVENTORY ITEM MODAL                    */}
+      {/* ========================================================= */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden text-zinc-900 animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 bg-zinc-950 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    <span>{editingItem ? 'Edit Inventory Item' : 'Add Custom Inventory Item'}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Custom Stock
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {editingItem
+                      ? `Update stock pricing and SKU for ${editingItem.name}`
+                      : 'Add new spare display, battery, IC, or accessory to workshop catalog'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Form */}
+            <form onSubmit={handleFormSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              {formError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              {/* Part Name */}
+              <div>
+                <label className="block text-xs font-bold text-zinc-800 uppercase tracking-wider mb-1">
+                  Item / Part Name <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. iPhone 14 Pro OLED Screen Original"
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10 focus:outline-hidden bg-white text-zinc-900"
+                />
+              </div>
+
+              {/* Brand & Model Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Device Brand
+                  </label>
+                  <select
+                    value={formBrand}
+                    onChange={(e) => setFormBrand(e.target.value)}
+                    className="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900 cursor-pointer"
+                  >
+                    {POPULAR_INVENTORY_BRANDS.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                    <option value="Other">Other / Custom Brand</option>
+                  </select>
+                  {formBrand === 'Other' && (
+                    <input
+                      type="text"
+                      placeholder="Enter brand name..."
+                      value={formCustomBrand}
+                      onChange={(e) => setFormCustomBrand(e.target.value)}
+                      className="w-full text-xs mt-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 bg-white text-zinc-900"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Compatible Model / Device
+                  </label>
+                  <input
+                    type="text"
+                    value={formModel}
+                    onChange={(e) => setFormModel(e.target.value)}
+                    placeholder="e.g. iPhone 14 Pro / A2890"
+                    className="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900"
+                  />
+                </div>
+              </div>
+
+              {/* Category & SKU Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value)}
+                    className="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900 cursor-pointer"
+                  >
+                    {INVENTORY_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="Other">Other / Custom Category</option>
+                  </select>
+                  {formCategory === 'Other' && (
+                    <input
+                      type="text"
+                      placeholder="Enter category..."
+                      value={formCustomCategory}
+                      onChange={(e) => setFormCustomCategory(e.target.value)}
+                      className="w-full text-xs mt-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 bg-white text-zinc-900"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    SKU / Barcode Code
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formSku}
+                      onChange={(e) => setFormSku(e.target.value)}
+                      placeholder="e.g. INV-CUST-1049"
+                      className="w-full text-xs sm:text-sm font-mono px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Stock Qty & Low Stock Alert */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Initial Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formQty}
+                    onChange={(e) => setFormQty(e.target.value)}
+                    className="w-full text-xs sm:text-sm font-mono px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Min Stock Reorder Alert
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formMinStock}
+                    onChange={(e) => setFormMinStock(e.target.value)}
+                    className="w-full text-xs sm:text-sm font-mono px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Pricing: Cost Price & Sale Price */}
+              <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-800 uppercase tracking-wider">
+                    Pricing & Profit Margin
+                  </span>
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-1">
+                      Wholesale / Cost Price ({curr})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formCostPrice}
+                      onChange={(e) => setFormCostPrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full text-xs sm:text-sm font-mono px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-900 font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-1">
+                      Customer / Sale Price ({curr})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formSalePrice}
+                      onChange={(e) => setFormSalePrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full text-xs sm:text-sm font-mono px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-900 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Profit calculation badge */}
+                {parseFloat(formSalePrice) > 0 && (
+                  <div className="p-2.5 bg-white border border-emerald-200 rounded-lg flex items-center justify-between text-xs font-mono">
+                    <span className="text-zinc-600">Expected Profit per unit:</span>
+                    <strong className="text-emerald-700 font-bold">
+                      +{curr}{(Math.max(0, (parseFloat(formSalePrice) || 0) - (parseFloat(formCostPrice) || 0))).toFixed(2)}
+                      {parseFloat(formCostPrice) > 0 && (
+                        <span className="text-[10px] text-zinc-500 ml-1">
+                          ({Math.round((((parseFloat(formSalePrice) || 0) - (parseFloat(formCostPrice) || 0)) / parseFloat(formCostPrice)) * 100)}% margin)
+                        </span>
+                      )}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {/* Storage Rack & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Storage Shelf / Rack / Bin
+                  </label>
+                  <input
+                    type="text"
+                    value={formLocation}
+                    onChange={(e) => setFormLocation(e.target.value)}
+                    placeholder="e.g. Rack B, Box 4"
+                    className="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                    Warranty / Supplier Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={formNotes}
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="e.g. 30 days testing warranty"
+                    className="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border border-zinc-300 focus:border-zinc-900 bg-white text-zinc-900"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-3 border-t border-zinc-200 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-xs active:scale-98"
+                >
+                  {editingItem ? 'Save Changes' : 'Save Custom Inventory Item'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Catalog Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-zinc-900">Reset Parts Catalog?</h4>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  This will reload the standard workshop catalog of mobile spare parts.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="px-3 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onResetCatalog?.();
+                  setShowResetConfirm(false);
+                }}
+                className="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold cursor-pointer"
+              >
+                Confirm Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode & Shelf Sticker Label Modal */}
+      {barcodeLabelItem && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-sm w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center">
+                  <Barcode className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-900">Part Barcode & Shelf Label</h4>
+                  <p className="text-[11px] text-zinc-500">58mm / 80mm sticker format</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBarcodeLabelItem(null)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sticker Preview Box */}
+            <div className="p-4 bg-zinc-50 border-2 border-dashed border-zinc-300 rounded-xl space-y-3 font-mono text-center">
+              <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
+                {profile.shopName || 'Mobile Repair Center'}
+              </div>
+              <div>
+                <div className="text-xs font-bold text-zinc-950 font-sans leading-tight">
+                  {barcodeLabelItem.name}
+                </div>
+                <div className="text-[11px] text-zinc-600 mt-0.5 font-sans">
+                  {barcodeLabelItem.brand} {barcodeLabelItem.model && `• ${barcodeLabelItem.model}`}
+                </div>
+              </div>
+
+              {/* Barcode Graphic */}
+              <div className="bg-white p-2 rounded-lg border border-zinc-200 inline-block w-full">
+                <div className="flex justify-center items-stretch h-10 gap-0.5 overflow-hidden px-4">
+                  {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2].map((w, i) => (
+                    <div
+                      key={i}
+                      className="bg-black"
+                      style={{ width: `${w * 1.5}px` }}
+                    />
+                  ))}
+                </div>
+                <div className="text-[11px] font-bold text-zinc-800 tracking-widest mt-1">
+                  *{barcodeLabelItem.sku}*
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 px-1 font-sans">
+                <div className="text-left">
+                  <span className="text-[10px] text-zinc-400 block uppercase">Price</span>
+                  <span className="font-bold font-mono text-zinc-900">
+                    {curr}{(barcodeLabelItem.salePrice || 0).toFixed(2)}
+                  </span>
+                </div>
+                {barcodeLabelItem.location && (
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-400 block uppercase">Bin / Shelf</span>
+                    <span className="font-bold text-zinc-700">{barcodeLabelItem.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBarcodeLabelItem(null)}
+                className="px-3.5 py-1.5 rounded-xl border border-zinc-200 text-zinc-600 text-xs font-semibold cursor-pointer hover:bg-zinc-100"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Print Sticker</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

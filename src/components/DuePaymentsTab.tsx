@@ -21,10 +21,15 @@ import {
   Sparkles,
   Check,
   X,
+  BellRing,
+  Send,
+  Download,
 } from 'lucide-react';
 import { RepairOrder, ShopProfile } from '../types';
 import { getOrderDeviceName, getOrderModelNumber } from '../utils/orderUtils';
 import { generateQrCodeDataUrl, getBillingQrPayload } from '../utils/qr';
+import { WhatsAppShareModal } from './WhatsAppShareModal';
+import { DueReminderModal } from './DueReminderModal';
 
 interface DuePaymentsTabProps {
   orders: RepairOrder[];
@@ -38,6 +43,8 @@ interface DuePaymentsTabProps {
   ) => void;
   onOpenReceipt: (orderId: string) => void;
   onNavigateToOrders?: () => void;
+  onSaveProfile?: (profile: ShopProfile) => void;
+  onReminderSent?: (orderId: string, reminderMessage: string) => void;
 }
 
 export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
@@ -47,6 +54,8 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
   onCollectPayment,
   onOpenReceipt,
   onNavigateToOrders,
+  onSaveProfile,
+  onReminderSent,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'delivered'>('all');
@@ -62,6 +71,8 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
   const [qrModalOrder, setQrModalOrder] = useState<RepairOrder | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [qrLabel, setQrLabel] = useState<string>('');
+  const [whatsAppModalOrder, setWhatsAppModalOrder] = useState<RepairOrder | null>(null);
+  const [reminderModalOrder, setReminderModalOrder] = useState<RepairOrder | null>(null);
 
   // Copied alert
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -162,28 +173,60 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
     setQrDataUrl(url);
   };
 
-  // Generate polite WhatsApp Reminder
-  const handleSendWhatsAppReminder = (order: RepairOrder) => {
-    const balance = Math.max(0, order.cost - order.deposit);
-    const shopName = profile.shopName || 'Mobile Hospital';
-    const upiInfo = profile.upi ? `\n💳 Pay via UPI: ${profile.upi}` : '';
-    const phoneClean = order.phone.replace(/[^0-9]/g, '');
-
-    const devName = getOrderDeviceName(order);
-    const modelNo = getOrderModelNumber(order);
-    const deviceDisplay = modelNo ? `${devName} (Model: ${modelNo})` : devName;
-
-    const message = `Hello ${order.name} Ji,\n\nThis is a polite reminder from *${shopName}* regarding your device repair:\n\n📱 *Device:* ${deviceDisplay}\n🔖 *Ticket ID:* ${order.id}\n💰 *Total Bill:* ${curr}${order.cost.toFixed(2)}\n✅ *Advance Paid:* ${curr}${order.deposit.toFixed(2)}\n⚠️ *Pending Balance Due:* ${curr}${balance.toFixed(2)}${upiInfo}\n\nPlease settle this balance at your earliest convenience. Thank you for choosing ${shopName}!`;
-
-    const encoded = encodeURIComponent(message);
-    const waUrl = `https://wa.me/${phoneClean}?text=${encoded}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  // Open Customer Due Amount Reminder modal
+  const handleOpenDueReminder = (order: RepairOrder) => {
+    setReminderModalOrder(order);
   };
 
   const handleCopyText = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleExportDuesCSV = () => {
+    if (filteredDues.length === 0) return;
+    const headers = [
+      'Order ID',
+      'Customer Name',
+      'Phone Number',
+      'Device / Item',
+      'Model No',
+      'Date Booked',
+      'Status',
+      'Total Bill',
+      'Advance Paid',
+      'Outstanding Due',
+      'Last Reminder Date',
+    ];
+    const rows = filteredDues.map((o) => {
+      const due = Math.max(0, o.cost - o.deposit);
+      const dev = getOrderDeviceName(o);
+      const modelNum = getOrderModelNumber(o);
+
+      return [
+        `"${o.id}"`,
+        `"${o.name.replace(/"/g, '""')}"`,
+        `"${(o.phone || '').replace(/"/g, '""')}"`,
+        `"${dev.replace(/"/g, '""')}"`,
+        `"${modelNum.replace(/"/g, '""')}"`,
+        `"${o.date}"`,
+        `"${o.status}"`,
+        o.cost || 0,
+        o.deposit || 0,
+        due,
+        `"${o.lastReminderSent || o.lastDueReminderDate || 'Never'}"`,
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `MH_Due_Debtors_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -197,8 +240,8 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
                 <CreditCard className="w-5 h-5" />
               </span>
               <div>
-                <h2 className="text-xl font-bold text-zinc-900 tracking-tight">
-                  Customer Due Payments
+                <h2 className="text-xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+                  <span>Customer Due Payments & Reminders</span>
                 </h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
                   Track pending balances, send WhatsApp payment reminders, and record collections
@@ -208,6 +251,33 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {dueOrders.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (dueOrders[0]) {
+                    setReminderModalOrder(dueOrders[0]);
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                title="Send customer due amount reminder via WhatsApp, SMS, or Print"
+              >
+                <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                <span>Due Reminders ({dueOrders.length})</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleExportDuesCSV}
+              disabled={filteredDues.length === 0}
+              className="px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 disabled:opacity-50 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download outstanding due ledger as CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Export Due CSV</span>
+            </button>
+
             <button
               type="button"
               onClick={() => window.print()}
@@ -239,7 +309,7 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
                 {curr}
               </span>
             </div>
-            <div className="text-2xl font-black text-rose-900 mt-2 tracking-tight">
+            <div className="text-2xl font-black font-mono tabular-nums text-rose-900 mt-2 tracking-tight">
               {curr}{totalOutstandingDue.toFixed(2)}
             </div>
             <p className="text-[11px] text-rose-700 font-medium mt-1">
@@ -254,7 +324,7 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
               </span>
               <Users className="w-4 h-4 text-zinc-400" />
             </div>
-            <div className="text-2xl font-black text-zinc-900 mt-2 tracking-tight">
+            <div className="text-2xl font-black font-mono tabular-nums text-zinc-900 mt-2 tracking-tight">
               {dueOrders.length}
             </div>
             <p className="text-[11px] text-zinc-500 font-medium mt-1">
@@ -271,7 +341,7 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
               </span>
               <Banknote className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-2xl font-black text-emerald-900 mt-2 tracking-tight">
+            <div className="text-2xl font-black font-mono tabular-nums text-emerald-900 mt-2 tracking-tight">
               {curr}{totalAdvanceCollected.toFixed(2)}
             </div>
             <p className="text-[11px] text-emerald-700 font-medium mt-1">
@@ -286,7 +356,7 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
               </span>
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-2xl font-black text-zinc-900 mt-2 tracking-tight">
+            <div className="text-2xl font-black font-mono tabular-nums text-zinc-900 mt-2 tracking-tight">
               {fullyPaidOrdersCount}
             </div>
             <p className="text-[11px] text-zinc-500 font-medium mt-1">
@@ -513,12 +583,21 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
 
                       {/* Balance Due */}
                       <td className="py-3.5 px-5">
-                        <div className="text-sm font-black text-rose-600">
+                        <div className="text-sm font-black text-rose-600 font-mono tabular-nums">
                           {curr}{balance.toFixed(2)}
                         </div>
                         <span className="inline-block px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-0.5 uppercase tracking-wide">
                           UNPAID
                         </span>
+                        {order.reminderCount && order.reminderCount > 0 ? (
+                          <div
+                            className="flex items-center gap-1 text-[10px] font-medium text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-1"
+                            title={order.lastReminderSent ? `Last sent: ${new Date(order.lastReminderSent).toLocaleString()}` : ''}
+                          >
+                            <BellRing className="w-2.5 h-2.5 text-amber-600" />
+                            <span>Reminded {order.reminderCount}x</span>
+                          </div>
+                        ) : null}
                       </td>
 
                       {/* Actions */}
@@ -535,15 +614,15 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
                             <span>Collect</span>
                           </button>
 
-                          {/* WhatsApp Reminder Button */}
+                          {/* Customer Due Amount Reminder Button */}
                           <button
                             type="button"
-                            onClick={() => handleSendWhatsAppReminder(order)}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Send payment reminder to customer on WhatsApp"
+                            onClick={() => handleOpenDueReminder(order)}
+                            className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
+                            title="Send Customer Due Amount Reminder (WhatsApp, SMS, or Print Notice)"
                           >
-                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Remind</span>
+                            <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Remind Due</span>
                           </button>
 
                           {/* Quick UPI QR scan button */}
@@ -764,6 +843,8 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
                 <img
                   src={qrDataUrl}
                   alt="UPI Payment QR"
+                  loading="lazy"
+                  decoding="async"
                   className="w-56 h-56 mx-auto object-contain"
                   referrerPolicy="no-referrer"
                 />
@@ -806,6 +887,28 @@ export const DuePaymentsTab: React.FC<DuePaymentsTabProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* WhatsApp Cloud API & Image Modal */}
+      {whatsAppModalOrder && (
+        <WhatsAppShareModal
+          isOpen={Boolean(whatsAppModalOrder)}
+          onClose={() => setWhatsAppModalOrder(null)}
+          order={whatsAppModalOrder}
+          profile={profile}
+          onSaveProfile={onSaveProfile}
+        />
+      )}
+
+      {/* Customer Due Amount Reminder Modal */}
+      {reminderModalOrder && (
+        <DueReminderModal
+          isOpen={Boolean(reminderModalOrder)}
+          onClose={() => setReminderModalOrder(null)}
+          order={reminderModalOrder}
+          profile={profile}
+          onReminderSent={onReminderSent}
+        />
       )}
     </div>
   );
